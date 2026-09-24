@@ -18,3 +18,6 @@ class BackendError(Error):
 
 class ProcessingError(Error):
     pass
+
+class APIError(Error):
+    pass

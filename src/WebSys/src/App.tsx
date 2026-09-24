@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { ShowMap } from './components/Map'
+import { ShowMap } from './components/leaflet/Map'
+import { CheckStatus } from './components/website_components/test'
 
 function App() {
 
   return (
     <>
     <ShowMap/>
+    <CheckStatus/>
     </>
   )
 }
