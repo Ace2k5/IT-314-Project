@@ -5,8 +5,7 @@ from pathlib import Path
 
 INFO_LOCATION = Path(__file__).parent.parent / "info.log"
 
-def setup_log():
-    stringIO = StringIO()
+def setup_log(stringIO):
     formatter = logging.Formatter(
         "DATE: {asctime} | LEVEL: {levelname} | MSG: {message}",
         style="{",
@@ -27,3 +26,14 @@ def setup_log():
     
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
+
+if __name__ == "__main__":
+    from io import StringIO
+
+    s = 'This is initial string.'
+    f = StringIO(s) # StringIO object
+
+    f.write(" Welcome to GeeksForGeeks.")
+    f.seek(0)
+    m = f.getvalue()
+    print(m)

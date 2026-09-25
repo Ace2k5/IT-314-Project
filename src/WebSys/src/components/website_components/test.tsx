@@ -6,9 +6,11 @@ export function CheckStatus(){
 
     const checkstatus = async () => {
         const backend = BackendConnection()
-        const response = await backend.CheckStatus()
+        const response = await backend.Log("Hello")
+        console.log(response)
         if (response){
-            setText(response.text)
+            setText(response.log_message)
+            
         }
     }
 
