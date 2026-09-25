@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Map } from './components/leaflet/Map'
-import { CheckStatus } from './components/website_components/test'
+import { ShowDebugPanel } from './components/debug/DebugPanelButton'
+import { ShowMap } from './components/leaflet/MapButton'
 
 function App() {
-
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <>
-    <Map/>
-    <CheckStatus/>
+    <ShowDebugPanel open={open} setOpen={setOpen}/>
+    <ShowMap open={open} setOpen={setOpen}/>
     </>
   )
 }
