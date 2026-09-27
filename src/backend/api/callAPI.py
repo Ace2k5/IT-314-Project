@@ -8,18 +8,21 @@ from backend import errors
 log = logging.getLogger(__name__)
 
 def weather_coroutes(app : FastAPI):
-    @app.get("/weather")
-    def get_weather():
+    @app.post("/weather")
+    def get_weather(current_location : getMessage.WeatherInfo):
+        # Just a test...
         url = configAPI.TEMP_URL
         response = httpx.get(url)
-        
+        log.info(response.headers)
+        log.info(response.status_code)
+        log.info(response.text)
         return response.json()
     
 def check_status(app : FastAPI):
     @app.get("/status")
     def status():
         response = {
-            "text": "Hello World"
+            "text": "Connection Successful"
         }
         
         return response

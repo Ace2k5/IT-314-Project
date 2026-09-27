@@ -5,7 +5,7 @@ export const BackendConnection = () => ({
             console.log("Was not able to get a response from the backend.")
             return null
         }
-        console.log("OK")
+        BackendConnection().Log("OK")
         return await response.json()
     },
     Log: async (message: string) => {
@@ -21,6 +21,20 @@ export const BackendConnection = () => ({
             return null
         }
         console.log(`OK`)
+        return await response.json()
+    },
+    GetWeather: async () => {
+        const response = await fetch("http://localhost:9999/weather", {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({current_location: "Manila"})
+        })
+        if (!response){
+            BackendConnection().Log("Failed to get weather information.")
+        }
+        BackendConnection().Log("OK")
         return await response.json()
     }
 

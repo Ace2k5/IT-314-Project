@@ -1,1 +1,1 @@
-TEMP_URL = "https://open-meteo.com/en/docs?timezone=Asia%2FSingapore&bounding_box=-90,-180,90,180"
+TEMP_URL = "https://api.open-meteo.com/v1/forecast?latitude=14.6042&longitude=120.9822&hourly=temperature_2m&timezone=Asia%2FSingapore"

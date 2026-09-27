@@ -16,8 +16,10 @@ export function CheckStatus(){
 
     return(
         <>
-        <button onClick={checkstatus}>Call Backend</button>
-        {text && <p>{text}</p>}
+        <div className="debug-component">
+            <button onClick={checkstatus}>Call Backend</button>
+            {text && <p>{text}</p>}
+        </div>
         </>
     )
 }

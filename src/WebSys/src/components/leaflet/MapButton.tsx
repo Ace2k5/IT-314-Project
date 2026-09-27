@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
 import { Map } from "./Map";
 
@@ -23,8 +22,10 @@ export function ShowMap({open, setOpen}: ShowMapProps){
 
     return(
     <>
-    <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
-    {open === "map" && <Map/>}
+    <div className="map-component">
+        <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
+        {open === "map" && <Map/>}
+    </div>
     </>
     )
 }
