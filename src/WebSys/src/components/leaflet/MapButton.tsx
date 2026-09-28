@@ -1,5 +1,5 @@
 import { BackendConnection } from "../../api/receiveAPI";
-import { Map } from "./Map";
+import { MMap } from "./Map";
 
 type ShowMapProps = {
     open: string | null,
@@ -24,7 +24,7 @@ export function ShowMap({open, setOpen}: ShowMapProps){
     <>
     <div className="map-component">
         <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
-        {open === "map" && <Map/>}
+        {open === "map" && <MMap/>}
     </div>
     </>
     )

@@ -23,18 +23,16 @@ export const BackendConnection = () => ({
         console.log(`OK`)
         return await response.json()
     },
-    GetWeather: async () => {
+    GetWeather: async (is_detailed: Boolean) => {
         const response = await fetch("http://localhost:9999/weather", {
             method: "POST",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({current_location: "Manila"})
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({is_detailed: is_detailed})
         })
         if (!response){
             BackendConnection().Log("Failed to get weather information.")
         }
-        BackendConnection().Log("OK")
+        BackendConnection().Log("OK: Weather")
         return await response.json()
     }
 

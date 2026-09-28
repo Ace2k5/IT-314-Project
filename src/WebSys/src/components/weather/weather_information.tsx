@@ -18,7 +18,8 @@ export function GetWeather({open}: WeatherProps){
                 console.log("Could not get the log information. Check the Uvicorn server.")
             }
         }
-        setInfo(`Timezone: ${response.timezone}\nLatitude: ${response.latitude}\nLongtitude: ${response.longitude}`)
+        setInfo(`Timezone: ${response.timezone}\nLatitude: ${response.latitude}\nLongtitude: ${response.longitude},
+            ${response.current.temperature_2m}${response.current_units.temperature_2m}`)
     }
 
     return(
