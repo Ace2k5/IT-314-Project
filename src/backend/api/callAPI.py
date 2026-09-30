@@ -106,7 +106,7 @@ def gdacs(app: FastAPI):
         log.info("[Earthquake Information]: Grabbing Earthquake information...")
         now = datetime.datetime.now()
         start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
-        search = configAPI.search_params(None, "EQ", start_of_day, now, "red;orange")
+        search = configAPI.search_params("EQ", start_of_day, now, "red;orange")
         result = httpx.get(configAPI.call_gdacs(search_params=search), timeout=10)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
