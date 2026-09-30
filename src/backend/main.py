@@ -17,5 +17,6 @@ stringIO = StringIO()
 logger.setup_log(stringIO)
 
 callAPI.weather_coroutes(app)
+callAPI.gdacs(app)
 callAPI.check_status(app)
 callAPI.process_log(app, stringIO)

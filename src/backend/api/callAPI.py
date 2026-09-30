@@ -5,6 +5,7 @@ from backend.request_models import getMessage
 from backend.geography import locations
 from fastapi import FastAPI
 from backend import errors
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -48,11 +49,19 @@ def weather_coroutes(app : FastAPI):
         99: "stormy",
     }
     
+    log.info("Grabbing weather information...")
+    last_datetime = datetime.datetime.now()
+    threshold = datetime.timedelta(
+        minutes=3
+    )
+    weather_location_cache = dict()
+    weather_region_cache = dict()
+    is_first_time = True
+    
     def helper_func(loc: dict[str, dict[str, float]]):
         dictionary_of_location = dict()
         for location, position in loc.items():
-            weather = ""
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore" # type: ignore
+            url = configAPI.call_openmateo(position)
             response = httpx.get(url, timeout=10)
             data = response.json()
             dictionary_of_location[location] = {
@@ -67,13 +76,44 @@ def weather_coroutes(app : FastAPI):
     
     @app.post("/weather")
     def get_weather(is_detailed : getMessage.WeatherInfo):
-        if is_detailed.is_detailed == True:
-            dictionary_of_locations = helper_func(locations.LOCATIONS)
-            return dictionary_of_locations
+        
+        nonlocal weather_location_cache
+        nonlocal weather_region_cache
+        nonlocal last_datetime
+        nonlocal is_first_time
+        
+        current_datetime = datetime.datetime.now()
+        if is_first_time == True or (current_datetime - last_datetime) > threshold:
+            last_datetime = current_datetime
+            is_first_time = False
+            if is_detailed.is_detailed == True:
+                dictionary_of_locations = helper_func(locations.LOCATIONS)
+                weather_location_cache = dictionary_of_locations
+                return dictionary_of_locations
+            else:
+                dictionary_of_locations = helper_func(locations.REGIONS)
+                weather_region_cache = dictionary_of_locations
+                return dictionary_of_locations
         else:
-            dictionary_of_locations = helper_func(locations.REGIONS)
-            return dictionary_of_locations
-    
+            if is_detailed.is_detailed == True:
+                return weather_location_cache
+            else:
+                return weather_region_cache
+        
+def gdacs(app: FastAPI):
+    @app.get("/earthquake")
+    def earthquake():
+        log.info("[Earthquake Information]: Grabbing Earthquake information...")
+        now = datetime.datetime.now()
+        start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
+        search = configAPI.search_params(None, "EQ", start_of_day, now, "red;orange")
+        result = httpx.get(configAPI.call_gdacs(search_params=search), timeout=10)
+        if not result:
+            log.info("[Earthquake Information]: Could not grab anything.")
+        else:
+            log.info(f"[Earthquake Information]: {result.json()}")
+        return result.json()
+        
 def check_status(app : FastAPI):
     @app.get("/status")
     def status():
@@ -116,5 +156,3 @@ if "__main__" == __name__:
                 "weather": data["current"]["weather_code"],
             }
         return dictionary_of_location
-    from backend.geography import locations
-    print(helper_func(locations.LOCATIONS))

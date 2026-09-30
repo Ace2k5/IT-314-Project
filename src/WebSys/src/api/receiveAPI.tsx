@@ -32,7 +32,21 @@ export const BackendConnection = () => ({
         if (!response){
             BackendConnection().Log("Failed to get weather information.")
         }
-        BackendConnection().Log("OK: Weather")
+        else{
+            BackendConnection().Log("OK: Weather")
+            console.log("OK: Weather")
+        }
+        return await response.json()
+    },
+    GetEarthquake: async () => {
+        const response = await fetch("http://localhost:9999/earthquake")
+        if (!response){
+            BackendConnection().Log("Failed to get earthquake information.")
+        }
+        else {
+            BackendConnection().Log("OK: Earthquake")
+            console.log("OK: Earthquake")
+        }
         return await response.json()
     }
 
