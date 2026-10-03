@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ShowDebugPanel } from './components/debug/DebugPanelButton'
 import { ShowMap } from './components/leaflet/MapButton'
+import { ShowChat } from './components/chat/ChatButton'
 import { GetWeather } from './components/weather/weather_information'
 
 function App() {
@@ -20,6 +21,11 @@ function App() {
           <GetWeather open={open}/>
       </div>
     </div>
+
+    <div className="chat-button">
+      <ShowChat open={open} setOpen={setOpen}/>
+    </div>
+
     </>
   )
 }
