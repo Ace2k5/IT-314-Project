@@ -69,6 +69,7 @@ export function MMap() {
   useEffect(() => {
     console.log("Map mounted")
     get_weather()
+    console.log("Getting e")
   }, [])
   
   return (

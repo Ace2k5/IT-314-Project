@@ -1,6 +1,8 @@
 import datetime
 from typing import Any
 import httpx
+import math
+from pprint import pprint
 
 def call_openmateo(position: dict[str, float]):
     return f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
@@ -37,27 +39,40 @@ def search_params(eventlist: str, fromdate: datetime.datetime, todate: datetime.
     return params
 
 def gdacs_extract(gdacs_info: dict[str, Any]):
-    ph = dict()
-    gdacs_len = len(gdacs_info)
-    for event in range(len(gdacs_info)):
-        if gdacs_info["properties"]["country"] == "Philippines":
-            print("Working")
-            """
-            geometry_info = httpx.get(url=event["properties"]["url"]["geometry"], timeout=10).json()
-            iter_geometry = len(geometry_info)
-            print(iter_geometry)
-            for i in range(iter_geometry):
-                for properties in geometry_info[i]["properties"]:
-                    if properties["intensity"] in (4, 6, 8):
-                        print("WORKING")
+    outer_list = list()
+    for feature in gdacs_info["features"]:
+        if feature["properties"]["country"]== "Philippines":
+            outer_prop = feature["properties"]
+            print(outer_prop["htmldescription"])
+            geometry_info = httpx.get(url=feature["properties"]["url"]["geometry"], timeout=10).json()
+            for geometry in geometry_info["features"]:
+                if "intensity" in geometry["properties"]:
+                    inner_prop = geometry["properties"]
+                    if inner_prop["intensity"] in (4, 6, 8):
+                        intensity = inner_prop["intensity"]
+                        
+                        w, s, e, n = geometry["bbox"]
+                        width_km  = (e - w) * 111 * math.cos(math.radians((s + n) / 2))   # longitude shrinks with latitude
+                        height_km = (n - s) * 111
+                        temp, temp2 = outer_prop["fromdate"].split("T"), outer_prop["fromdate"].split("T")
+                        initialdate = " | ".join(temp)
+                        enddate = " | ".join(temp2)
+                        inner_dict = {
+                            "description": outer_prop["htmldescription"],
+                            "severity": outer_prop["severitydata"]["severity"],
+                            "severitytext": outer_prop["severitydata"]["severitytext"],
+                            "alertlevel": outer_prop["alertlevel"],
+                            "intensity": intensity,
+                            "width": width_km,
+                            "height": height_km,
+                            "initialdate": initialdate,
+                            "enddate": enddate
+                            
+                        }
+                        outer_list.append(inner_dict)
+    return outer_list
         
-            ph = {
-                "description": gdacs_info["properties"]["htmldescription"],
-                "alertlevel": gdacs_info["properties"]["alertlevel"],
-                "severity": gdacs_info["properties"]["severitydata"]["severity"],
-                "severitytext": gdacs_info["properties"]["severitydata"]["severitytext"],
-                "severityunit": gdacs_info["properties"]["severitydata"]["severityunit"]
-            }"""
+                
             
         
         
@@ -68,4 +83,4 @@ if __name__ == "__main__":
     start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
     search = search_params("EQ", start_of_day, now, "red;orange")
     result = httpx.get(call_gdacs(search_params=search), timeout=10)
-    gdacs_extract(result.json())
+    pprint(gdacs_extract(result.json()))
