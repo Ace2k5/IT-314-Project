@@ -50,27 +50,53 @@ function MapWatcher({setZoom}: { setZoom: React.Dispatch<React.SetStateAction<nu
 
 export function MMap() {
   const [currentZoom, setZoom] = useState(6)
-  const [weatherDetailed, setWeatherDetailed] = useState(new Map())
-  const [weather, setWeather] = useState(new Map())
+  const [weatherDetailed, setWeatherDetailed] = useState(new Map()) /* Both are for the map */
+  const [weather, setWeather] = useState(new Map()) /* Both are for the map */
+
+  const [requested, setRequested] = useState(false)
+  const [requestedDetail, setDetail] = useState(false)
   const backend = BackendConnection()
 
-  const get_weather = async () => {
-    const detail = await backend.GetWeather(true)
-    console.log("DETAIL:", detail)
-
-    setWeatherDetailed(detail)
-
-    const normal = await backend.GetWeather(false)
-    console.log("NORMAL:", normal)
-
-    setWeather(normal)
+  const get_weather = async (is_detailed: boolean) => {
+    if (is_detailed){
+      const detail = await backend.GetWeather(true)
+      if (detail === 0) {
+        backend.Log("[Frontend] Detailed weather has nothing to display yet.")
+      }
+      else {
+      console.log("[Frontend] Detailed Weather:", detail)
+      setWeatherDetailed(detail)
+      }
+    }
+    else {
+      if (weather === 0) {
+        backend.Log("[Frontend] Weather has nothing to display yet.")
+      }
+      {
+        const normal = await backend.GetWeather(false)
+        console.log("[Frontend] Normal Weather:", normal)
+        setWeather(normal)
+      }
+    }
   }
 
   useEffect(() => {
     console.log("Map mounted")
-    get_weather()
-    console.log("Getting e")
-  }, [])
+    if (requested) {
+      console.log("Map has been requested already, ignoring...")
+    }
+    else if (!requested && currentZoom < 12) {
+      get_weather(false)
+      setRequested(true)
+    }
+    if (requestedDetail) {
+      console.log("Map has been requested already, ignoring...")
+    }
+    else if (!requestedDetail && currentZoom >= 12){
+      get_weather(true)
+      setDetail(true)
+    }
+  }, [currentZoom])
   
   return (
     <MapContainer
@@ -84,7 +110,7 @@ export function MMap() {
         attribution="&copy; OpenStreetMap contributors"
       />
       
-      {currentZoom >= 12 ?
+      {currentZoom >= 12 && (weatherDetailed && weather) ?
       
       Object.entries(weatherDetailed).map(([city, info]) => (
       <Marker position={[info["latitude"], info["longitude"]]} icon={icon({city: city, weather: info["weather_icon"], temperature: info["temperature"], temperature_icon: info["temperature_unit"]})}>
