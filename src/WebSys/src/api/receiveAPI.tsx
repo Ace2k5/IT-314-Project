@@ -2,7 +2,7 @@ export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
         if (!response){
-            console.log("Was not able to get a response from the backend.")
+            console.log("[Frontend] Was not able to get a response from the backend.")
             return null
         }
         BackendConnection().Log("OK")
@@ -17,7 +17,7 @@ export const BackendConnection = () => ({
             body: JSON.stringify({"key": message})
         })
         if (!response){
-            console.log("Could not access log api.")
+            console.log("[Frontend] Could not access log api.")
             return null
         }
         console.log(`OK`)
@@ -30,21 +30,21 @@ export const BackendConnection = () => ({
             body: JSON.stringify({is_detailed: is_detailed})
         })
         if (!response){
-            BackendConnection().Log("Failed to get weather information.")
+            BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
         else{
-            BackendConnection().Log("OK: Weather")
-            console.log("OK: Weather")
+            BackendConnection().Log(`[Frontend] OK: Weather`)
+            console.log(`[Frontend] OK: Weather`)
         }
         return await response.json()
     },
     GetEarthquake: async () => {
         const response = await fetch("http://localhost:9999/earthquake")
         if (!response){
-            BackendConnection().Log("Failed to get earthquake information.")
+            BackendConnection().Log("[Frontend] Failed to get earthquake information.")
         }
         else {
-            BackendConnection().Log("OK: Earthquake")
+            BackendConnection().Log("[Frontend] OK: Earthquake")
             console.log("OK: Earthquake")
         }
         return await response.json()
