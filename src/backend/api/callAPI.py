@@ -1,6 +1,6 @@
 import logging
 import httpx
-from backend.api import configAPI
+from backend.api import utilAPI
 from backend.request_models import getMessage
 from backend.geography import locations
 from fastapi import FastAPI
@@ -49,21 +49,21 @@ def weather_coroutes(app : FastAPI):
         99: "stormy",
     }
     
-    log.info("Grabbing weather information...")
-    last_datetime = datetime.datetime.now()
+    last_datetime = datetime.datetime.min
     threshold = datetime.timedelta(
         minutes=3
     )
     weather_location_cache = dict()
     weather_region_cache = dict()
-    is_first_time = True
     
     def helper_func(loc: dict[str, dict[str, float]]):
+        log.info("[Weather] Getting weather...")
         dictionary_of_location = dict()
         for location, position in loc.items():
-            url = configAPI.call_openmateo(position)
+            url = utilAPI.call_openmateo(position)
             response = httpx.get(url, timeout=10)
             data = response.json()
+            log.info(f"[Weather] Received as {data}")
             dictionary_of_location[location] = {
                 "latitude": position['latitude'],
                 "longitude": position['longitude'],
@@ -75,30 +75,33 @@ def weather_coroutes(app : FastAPI):
         return dictionary_of_location
     
     @app.post("/weather")
-    def get_weather(is_detailed : getMessage.WeatherInfo):
+    def get_weather(WeatherInfo : getMessage.WeatherInfo):
         
         nonlocal weather_location_cache
         nonlocal weather_region_cache
-        nonlocal last_datetime
-        nonlocal is_first_time
+        nonlocal last_datetime 
+        log.info("[Backend Info] Grabbing weather information...")
+        log.info("[Backend Info] Initializing both caches.")
         
         current_datetime = datetime.datetime.now()
-        if is_first_time == True or (current_datetime - last_datetime) > threshold:
+        if (current_datetime - last_datetime) > threshold:
+            log.info("[Cache] Conditional met for time, cache now updating...")
+            dictionary_of_locations = helper_func(locations.LOCATIONS)
+            weather_location_cache = dictionary_of_locations
+            log.info("[Cache] Location cache updated.")
+            dictionary_of_locations = helper_func(locations.REGIONS)
+            weather_region_cache = dictionary_of_locations
+            log.info("[Cache] Region cache updated.")
+            
             last_datetime = current_datetime
-            is_first_time = False
-            if is_detailed.is_detailed == True:
-                dictionary_of_locations = helper_func(locations.LOCATIONS)
-                weather_location_cache = dictionary_of_locations
-                return dictionary_of_locations
-            else:
-                dictionary_of_locations = helper_func(locations.REGIONS)
-                weather_region_cache = dictionary_of_locations
-                return dictionary_of_locations
         else:
-            if is_detailed.is_detailed == True:
-                return weather_location_cache
-            else:
-                return weather_region_cache
+            log.info("[Cache] Threshold not met, returning existing cache.")
+        if WeatherInfo.is_detailed == True:
+            log.info("[Cache] Returning location saved cache.")
+            return weather_location_cache
+        else:
+            log.info("[Cache] Returning region saved cache.")
+            return weather_region_cache
         
 def gdacs(app: FastAPI):
     @app.get("/earthquake")
@@ -106,8 +109,8 @@ def gdacs(app: FastAPI):
         log.info("[Earthquake Information]: Grabbing Earthquake information...")
         now = datetime.datetime.now()
         start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
-        search = configAPI.search_params("EQ", start_of_day, now, "red;orange")
-        result = httpx.get(configAPI.call_gdacs(search_params=search), timeout=10)
+        search = utilAPI.search_params("EQ", start_of_day, now, "red;orange")
+        result = httpx.get(utilAPI.call_gdacs(search_params=search), timeout=10)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
         else:
