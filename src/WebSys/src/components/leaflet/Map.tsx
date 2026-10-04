@@ -1,37 +1,7 @@
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl, useMap } from 'react-leaflet'
-import { useEffect, useState } from 'react';
-import L from 'leaflet';
+import { MapContainer, TileLayer, useMapEvents} from 'react-leaflet'
+import {useState } from 'react';
 import 'leaflet/dist/leaflet.css'
-import sunnyIcon from './map_assets/sunny.png'
-import stormyIcon from './map_assets/stormy.png'
-import rainyIcon from './map_assets/rainy.png'
-import cloudyIcon from './map_assets/cloudy.png'
-import { BackendConnection } from '../../api/receiveAPI';
-
-type location = {
-  city: String,
-  weather: "sunny" | "stormy" | "rainy" | "cloudy",
-  temperature: number,
-  temperature_icon: String
-
-}
-
-const weatherIcons = {
-  "sunny": sunnyIcon,
-  "stormy": stormyIcon,
-  "rainy": rainyIcon,
-  "cloudy": cloudyIcon
-}
-
-const icon = ({city, weather, temperature, temperature_icon}: location) => (L.divIcon({
-    html: `
-        <div>
-            <img src=${weatherIcons[weather]} height='50vh' />
-            <div>${temperature}${temperature_icon}</div>
-            <div>${city}</div>
-        </div>
-    `
-  }))
+import { Weather } from './Weather';
 
 function MapWatcher({setZoom}: { setZoom: React.Dispatch<React.SetStateAction<number>> }) {
     useMapEvents({
@@ -50,53 +20,7 @@ function MapWatcher({setZoom}: { setZoom: React.Dispatch<React.SetStateAction<nu
 
 export function MMap() {
   const [currentZoom, setZoom] = useState(6)
-  const [weatherDetailed, setWeatherDetailed] = useState(new Map()) /* Both are for the map */
-  const [weather, setWeather] = useState(new Map()) /* Both are for the map */
 
-  const [requested, setRequested] = useState(false)
-  const [requestedDetail, setDetail] = useState(false)
-  const backend = BackendConnection()
-
-  const get_weather = async (is_detailed: boolean) => {
-    if (is_detailed){
-      const detail = await backend.GetWeather(true)
-      if (detail === 0) {
-        backend.Log("[Frontend] Detailed weather has nothing to display yet.")
-      }
-      else {
-      console.log("[Frontend] Detailed Weather:", detail)
-      setWeatherDetailed(detail)
-      }
-    }
-    else {
-      if (weather === 0) {
-        backend.Log("[Frontend] Weather has nothing to display yet.")
-      }
-      {
-        const normal = await backend.GetWeather(false)
-        console.log("[Frontend] Normal Weather:", normal)
-        setWeather(normal)
-      }
-    }
-  }
-
-  useEffect(() => {
-    console.log("Map mounted")
-    if (requested) {
-      console.log("Map has been requested already, ignoring...")
-    }
-    else if (!requested && currentZoom < 12) {
-      get_weather(false)
-      setRequested(true)
-    }
-    if (requestedDetail) {
-      console.log("Map has been requested already, ignoring...")
-    }
-    else if (!requestedDetail && currentZoom >= 12){
-      get_weather(true)
-      setDetail(true)
-    }
-  }, [currentZoom])
   
   return (
     <MapContainer
@@ -109,25 +33,7 @@ export function MMap() {
         url="https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png?key=cb1_402u_1_2b0d51d8f3e9bea980b035cc"
         attribution="&copy; OpenStreetMap contributors"
       />
-      
-      {currentZoom >= 12 && (weatherDetailed && weather) ?
-      
-      Object.entries(weatherDetailed).map(([city, info]) => (
-      <Marker position={[info["latitude"], info["longitude"]]} icon={icon({city: city, weather: info["weather_icon"], temperature: info["temperature"], temperature_icon: info["temperature_unit"]})}>
-        <Popup>
-          {city}
-        </Popup>
-      </Marker>
-      ))
-      :
-      Object.entries(weather).map(([city, info]) => (
-        <Marker position={[info["latitude"], info["longitude"]]} icon={icon({city: city, weather: info["weather_icon"], temperature: info["temperature"], temperature_icon: info["temperature_unit"]})}>
-        <Popup>
-          {city}
-        </Popup>
-      </Marker>
-      ))
-    }
+      <Weather currentZoom={currentZoom}/>
     </MapContainer>
   )
 }
