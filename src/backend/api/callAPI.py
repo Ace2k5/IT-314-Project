@@ -104,18 +104,19 @@ def weather_coroutes(app : FastAPI):
             return weather_region_cache
         
 def gdacs(app: FastAPI):
-    @app.get("/earthquake")
-    def earthquake():
-        log.info("[Earthquake Information]: Grabbing Earthquake information...")
-        now = datetime.datetime.now()
-        start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
-        search = utilAPI.search_params("EQ", start_of_day, now, "red;orange")
-        result = httpx.get(utilAPI.call_gdacs(search_params=search), timeout=10)
+    @app.post("/earthquake")
+    def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
+        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
+        year = EarthquakeDate.year
+        month = EarthquakeDate.month
+        day = EarthquakeDate.day
+        log.info("[Earthquake Backend Information] Looking for")
+        result = utilAPI.call_gdacs_earthquake(year, month, day)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
         else:
-            log.info(f"[Earthquake Information]: {result.json()}")
-        return result.json()
+            log.info(f"[Earthquake Information]: {result}")
+        return result
         
 def check_status(app : FastAPI):
     @app.get("/status")

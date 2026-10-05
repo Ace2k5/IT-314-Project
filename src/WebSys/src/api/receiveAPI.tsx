@@ -1,3 +1,9 @@
+type Dates = {
+    year: number,
+    month: number,
+    day: number
+}
+
 export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
@@ -38,8 +44,15 @@ export const BackendConnection = () => ({
         }
         return await response.json()
     },
-    GetEarthquake: async () => {
-        const response = await fetch("http://localhost:9999/earthquake")
+    GetEarthquake: async ({year, month, day}: Dates) => {
+        const response = await fetch("http://localhost:9999/earthquake", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"year": year, "month": month, "day": day})
+            }
+        )
         if (!response){
             BackendConnection().Log("[Frontend] Failed to get earthquake information.")
         }
@@ -50,7 +63,6 @@ export const BackendConnection = () => ({
         return await response.json()
     }
 
-    
 
 
 })

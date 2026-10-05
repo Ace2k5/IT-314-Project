@@ -1,20 +1,12 @@
 import { useState } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
+import { Earthquake } from "../leaflet/Earthquake";
 
 
 
 export function CheckStatus(){
     const [text, setText] = useState("")
-    const [earthquake, setEarthquake] = useState(new Map())
     const backend = BackendConnection()
-
-    const checkearthquake = async () => {
-        const response = await backend.GetEarthquake()
-        console.log(response)
-        if (response){
-            setEarthquake(response)
-        }
-    }
 
     const checkstatus = async () => {
         const response = await backend.Log("Hello")
@@ -34,11 +26,7 @@ export function CheckStatus(){
             </div>
 
             <div className="earthquakeStatus">
-                <button onClick={checkearthquake}>Get Earthquake</button>
-                {earthquake ? Object.entries(earthquake).map((key:any,value:any) => (
-                    <p key={key}>{value}</p>
-                )) : <p>None</p>
-            }
+                <Earthquake/>
 
             </div>
         </div>

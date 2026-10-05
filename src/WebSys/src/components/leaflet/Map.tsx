@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, useMapEvents} from 'react-leaflet'
 import {useState } from 'react';
 import 'leaflet/dist/leaflet.css'
 import { Weather } from './Weather';
+import { Earthquake } from './Earthquake';
 
 function MapWatcher({setZoom}: { setZoom: React.Dispatch<React.SetStateAction<number>> }) {
     useMapEvents({
