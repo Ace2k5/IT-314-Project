@@ -5,9 +5,12 @@ from backend.request_models import getMessage
 from backend.geography import locations
 from fastapi import FastAPI
 from backend import errors
-import datetime
+import time
 
 log = logging.getLogger(__name__)
+last_datetime = 0
+weather_location_cache = dict()
+weather_region_cache = dict()
 
 def weather_coroutes(app : FastAPI):
     weather_icons = {
@@ -48,15 +51,9 @@ def weather_coroutes(app : FastAPI):
         97: "stormy",
         99: "stormy",
     }
+    threshold = 180 * 1000
     
-    last_datetime = datetime.datetime.min
-    threshold = datetime.timedelta(
-        minutes=3
-    )
-    weather_location_cache = dict()
-    weather_region_cache = dict()
-    
-    def helper_func(loc: dict[str, dict[str, float]]):
+    def helper_func(loc: dict[str, dict[str, float]], fetched_at: float):
         log.info("[Weather] Getting weather...")
         dictionary_of_location = dict()
         for location, position in loc.items():
@@ -70,26 +67,24 @@ def weather_coroutes(app : FastAPI):
                 "temperature": data["current"]["temperature_2m"],
                 "temperature_unit": data["current_units"]["temperature_2m"],
                 "weather": data["current"]["weather_code"],
-                "weather_icon": weather_icons[data["current"]["weather_code"]]
+                "weather_icon": weather_icons[data["current"]["weather_code"]],
+                "fetched_at": fetched_at
             }
         return dictionary_of_location
     
     @app.post("/weather")
     def get_weather(WeatherInfo : getMessage.WeatherInfo):
-        
-        nonlocal weather_location_cache
-        nonlocal weather_region_cache
-        nonlocal last_datetime 
+        global weather_location_cache, weather_region_cache, last_datetime  
         log.info("[Backend Info] Grabbing weather information...")
         log.info("[Backend Info] Initializing both caches.")
         
-        current_datetime = datetime.datetime.now()
+        current_datetime = time.time() * 1000
         if (current_datetime - last_datetime) > threshold:
             log.info("[Cache] Conditional met for time, cache now updating...")
-            dictionary_of_locations = helper_func(locations.LOCATIONS)
+            dictionary_of_locations = helper_func(locations.LOCATIONS, current_datetime)
             weather_location_cache = dictionary_of_locations
             log.info("[Cache] Location cache updated.")
-            dictionary_of_locations = helper_func(locations.REGIONS)
+            dictionary_of_locations = helper_func(locations.REGIONS, current_datetime)
             weather_region_cache = dictionary_of_locations
             log.info("[Cache] Region cache updated.")
             

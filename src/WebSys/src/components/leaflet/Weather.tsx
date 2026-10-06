@@ -5,6 +5,7 @@ import sunnyIcon from './map_assets/sunny.png'
 import stormyIcon from './map_assets/stormy.png'
 import rainyIcon from './map_assets/rainy.png'
 import cloudyIcon from './map_assets/cloudy.png'
+import snowyIcon from './map_assets/snowy.png'
 import L from 'leaflet';
 
 
@@ -24,7 +25,8 @@ const weatherIcons = {
   "sunny": sunnyIcon,
   "stormy": stormyIcon,
   "rainy": rainyIcon,
-  "cloudy": cloudyIcon
+  "cloudy": cloudyIcon,
+  "snowy": snowyIcon
 }
 
 const icon = ({city, weather, temperature, temperature_icon}: location) => (L.divIcon({
@@ -83,7 +85,7 @@ export function Weather({currentZoom}: Zoom){
         get_weather(true)
         setDetail(true)
     }
-    }, [currentZoom])
+    }, [currentZoom ])
 
     return (
         <>

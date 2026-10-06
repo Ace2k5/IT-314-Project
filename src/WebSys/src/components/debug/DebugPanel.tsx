@@ -13,7 +13,6 @@ export function CheckStatus(){
         console.log(response)
         if (response){
             setText(response.log_message)
-            
         }
     }
 

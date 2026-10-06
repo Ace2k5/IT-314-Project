@@ -4,6 +4,16 @@ type Dates = {
     day: number
 }
 
+interface WeatherResponse {
+                "latitude": number,
+                "longitude": number,
+                "temperature": number,
+                "temperature_unit": string,
+                "weather": string,
+                "weather_icon": string,
+                "fetched_at": number
+}
+
 export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
@@ -42,7 +52,7 @@ export const BackendConnection = () => ({
             BackendConnection().Log(`[Frontend] OK: Weather`)
             console.log(`[Frontend] OK: Weather`)
         }
-        return await response.json()
+        return await (response.json()) as WeatherResponse;
     },
     GetEarthquake: async ({year, month, day}: Dates) => {
         const response = await fetch("http://localhost:9999/earthquake", {

@@ -18,17 +18,17 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
     log.info(f"[Backend Earthquake] Fetching Earthquake information from GDACS.")
     def call_gdacs(search_params: dict[str, str]):
         url_search = "https://www.gdacs.org/gdacsapi/api/Events/geteventlist/SEARCH?"
-        search = ""
-        list_query = list()
+        query = ""
+        list_query: list[str] = list()
         for key, value in search_params.items():
             pairs = f"{key}={value}"
             list_query.append(pairs)
-        search += "&".join(list_query)
-        
-        return f"{url_search}{search}"
+        query += "&".join(list_query)
+        log.info(f"[Backend Earthquake] Search completed as the URL Link: {url_search}{query}")
+        return f"{url_search}{query}"
             
 
-    def search_params(eventlist: str, fromdate: datetime.datetime, todate: datetime.datetime, alertlevel: str):
+    def search_params(eventlist: str, fromdate: str, todate: str, alertlevel: str):
         '''
         Expected format for search_params (GDACS):
         country: "PHL",
@@ -40,7 +40,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
         Example link: https://www.gdacs.org/gdacsapi/api/Events/geteventlist/SEARCH?country=PHL&eventlist=EQ;TC&fromdate=2026-09-01&todate=2026-09-30&alertlevel=red      
         separated by &.
         '''
-        params = {
+        params: dict[str, str] = {
                 "eventlist": eventlist,
                 "fromdate": fromdate,
                 "todate": todate,
@@ -48,7 +48,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
         }
         return params
 
-    def gdacs_extract(gdacs_info: dict[str, Any]) -> list[dict[str, Any]]:
+    async def gdacs_extract(gdacs_info: dict[str, Any]) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = []
 
         for feature in gdacs_info["features"]:
@@ -106,7 +106,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
     
     now = datetime.datetime.now()
     start_of_day = now.replace(year=year, month=month, day=day, hour=0, minute=0, second=0, microsecond=0)
-    search = search_params("EQ", start_of_day, now, "red;orange")
+    search = search_params("EQ", start_of_day.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "red;orange")
     gdacs_info = httpx.get(call_gdacs(search_params=search), timeout=10).json()
     result = gdacs_extract(gdacs_info=gdacs_info)
     return result
