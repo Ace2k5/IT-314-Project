@@ -8,6 +8,15 @@ import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
 import L from 'leaflet';
 
+type WeatherResponse = {
+                "latitude": number,
+                "longitude": number,
+                "temperature": number,
+                "temperature_unit": string,
+                "weather": string,
+                "weather_icon": string,
+                "fetched_at": number
+}
 
 type Zoom = {
     currentZoom: number
@@ -40,8 +49,8 @@ const icon = ({city, weather, temperature, temperature_icon}: location) => (L.di
   }))
 
 export function Weather({currentZoom}: Zoom){
-    const [weatherDetailed, setWeatherDetailed] = useState(new Map()) /* Both are for the map */
-    const [weather, setWeather] = useState(new Map()) /* Both are for the map */
+    const [weatherDetailed, setWeatherDetailed] = useState<WeatherResponse | null> (null) /* Both are for the map */
+    const [weather, setWeather] = useState<WeatherResponse | null> (null) /* Both are for the map */
     const backend = BackendConnection()
     const [requested, setRequested] = useState(false)
     const [requestedDetail, setDetail] = useState(false)
@@ -49,7 +58,7 @@ export function Weather({currentZoom}: Zoom){
     const get_weather = async (is_detailed: boolean) => {
     if (is_detailed){
         const detail = await backend.GetWeather(true)
-        if (detail.size === 0) {
+        if (Object.keys(detail).length === 0) {
         backend.Log("[Frontend] Detailed weather has nothing to display yet.")
         }
         else {
@@ -58,7 +67,7 @@ export function Weather({currentZoom}: Zoom){
         }
     }
     else {
-        if (weather.size === 0) {
+        if (Object.keys(weather).length === 0) {
         backend.Log("[Frontend] Weather has nothing to display yet.")
         }
         {
@@ -85,7 +94,7 @@ export function Weather({currentZoom}: Zoom){
         get_weather(true)
         setDetail(true)
     }
-    }, [currentZoom ])
+    }, [currentZoom])
 
     return (
         <>
