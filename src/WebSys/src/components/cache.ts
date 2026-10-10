@@ -1,19 +1,23 @@
 import { BackendConnection } from "../api/receiveAPI"
-type WeatherCache = {
-    latitude: number;
-    longitude: number;
-    temperature: number;
-    temperature_unit: string;
-    weather: string;
-    weather_icon: string;
-    fetched_at: number;
-};
+export type WeatherKind = "sunny" | "stormy" | "rainy" | "cloudy" | "snowy"
+
+export type WeatherEntry = {
+    latitude: number
+    longitude: number
+    temperature: number
+    temperature_unit: string
+    weather: string
+    weather_icon: WeatherKind
+    fetched_at: number
+}
+
+export type WeatherMap = Record<string, WeatherEntry>
 
 
 const timeMs = 180000
 const backend = BackendConnection()
-let location_cache: WeatherCache | null = null;
-let region_cache: WeatherCache | null = null;
+let location_cache: WeatherMap | null = null;
+let region_cache: WeatherMap | null = null;
 let init_promise: Promise<void> | null = null;
 
 async function initCache(){
@@ -33,7 +37,7 @@ function ensureInit(){
 }
 
 async function updateCache(){
-    backend.Log("[Frrontend Cache] Updating cache...")
+    backend.Log("[Frontend Cache] Updating cache...")
     const [detailed, not_detailed] = await Promise.all([
         backend.GetWeather(true),
         backend.GetWeather(false),
@@ -47,21 +51,18 @@ async function updateCache(){
 export async function getWeatherCached(is_detailed: boolean){
     await ensureInit()
 
-    let cached: WeatherCache | null = null
+    let cached: WeatherMap | null = null
 
-    if (is_detailed) {
-        cached = location_cache
-    }
-    else {
-        cached = region_cache
-    }
-
-    if (cached && (Date.now() - cached.fetched_at ) < timeMs) {
-        backend.Log("[Frontend Cache] Time threshold not exceeded, cache still valid, returning cache...")
-        return cached
+    cached = is_detailed ? location_cache : region_cache
+    if (cached) {
+        const anyEntry = Object.values(cached)[0]
+        if (anyEntry && Date.now() - anyEntry.fetched_at < timeMs) {
+            backend.Log("[Frontend Cache] Cache still valid, returning cache...")
+            return cached
+        }
     }
 
     await updateCache()
-    return cached
+    return is_detailed ? location_cache : region_cache
 }
 

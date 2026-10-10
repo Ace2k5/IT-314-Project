@@ -1,17 +1,9 @@
+import type { WeatherMap } from "../components/cache"
+
 type Dates = {
     year: number,
     month: number,
     day: number
-}
-
-interface WeatherResponse {
-                "latitude": number,
-                "longitude": number,
-                "temperature": number,
-                "temperature_unit": string,
-                "weather": string,
-                "weather_icon": string,
-                "fetched_at": number
 }
 
 export const BackendConnection = () => ({
@@ -52,7 +44,7 @@ export const BackendConnection = () => ({
             BackendConnection().Log(`[Frontend] OK: Weather`)
             console.log(`[Frontend] OK: Weather`)
         }
-        return await (response.json()) as WeatherResponse;
+        return await (response.json()) as WeatherMap;
     },
     GetEarthquake: async ({year, month, day}: Dates) => {
         const response = await fetch("http://localhost:9999/earthquake", {

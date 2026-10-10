@@ -4,7 +4,8 @@ import httpx
 import math
 from pprint import pprint
 import logging
-import asyncio
+import sqlite3
+import json
 
 log = logging.getLogger("__name__")
 
@@ -14,7 +15,7 @@ def call_openmateo(position: dict[str, float]):
     return f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
 
 
-def call_gdacs_earthquake(year: int, month: int, day: int):
+def call_gdacs_earthquake(year: int, month: int, day: int, database):
     log.info(f"[Backend Earthquake] Fetching Earthquake information from GDACS.")
     def call_gdacs(search_params: dict[str, str]):
         url_search = "https://www.gdacs.org/gdacsapi/api/Events/geteventlist/SEARCH?"
@@ -47,8 +48,23 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
                 "alertlevel": alertlevel
         }
         return params
+    
+    def flatten_to_ring(geom: dict) -> list[list[float]]:
+        t = geom["type"]
+        c = geom["coordinates"]
 
-    async def gdacs_extract(gdacs_info: dict[str, Any]) -> list[dict[str, Any]]:
+        if t == "Point":
+            return [c]
+
+        if t == "Polygon":
+            return [pt for ring in c for pt in ring]
+
+        if t == "MultiPolygon":
+            return [pt for poly in c for ring in poly for pt in ring]
+
+        raise ValueError(f"Unhandled geometry type: {t}")
+
+    async def gdacs_extract(gdacs_info: dict[str, Any], database) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = []
 
         for feature in gdacs_info["features"]:
@@ -74,10 +90,11 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
                 mid_lat = math.radians((s + n) / 2)
                 intensities.append({
                     "intensity": gprops["intensity"],
+                    "geom_type": geometry["geometry"]["type"],
                     "width":  (e - w) * 111 * math.cos(mid_lat),
                     "height": (n - s) * 111,
                     "bbox": [w, s, e, n],
-                    "polygon":  geometry["geometry"]["coordinates"]
+                    "polygon":  flatten_to_ring(geometry["geometry"])
                 })
 
             if not intensities:
@@ -86,7 +103,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
             from_date = props["fromdate"]
             to_date = props["todate"]
 
-            events.append({
+            event = {
                 "eventid":      props["eventid"],
                 "description":  props["htmldescription"],
                 "severity":     props["severitydata"]["severity"],
@@ -95,12 +112,46 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
                 "initialdate":  from_date,
                 "enddate":      to_date,
                 "intensities":  intensities,
-            })
+            }
+            
+            events.append(event)
+            
+            # DB
+            
+            database.cursor.execute("""
+            INSERT OR REPLACE INTO Earthquake
+                (eventid, description, severity, severitytext,
+                 alertlevel, initialdate, enddate)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                event["eventid"], event["description"],
+                event["severity"], event["severitytext"],
+                event["alertlevel"], event["initialdate"], event["enddate"],
+            ))
+
+            database.cursor.execute("DELETE FROM Intensity WHERE eventid = ?", (event["eventid"],))
+
+            for i in intensities:
+                w, s, e, n = i["bbox"]
+                database.cursor.execute("""
+                    INSERT INTO Intensity
+                        (eventid, intensity, width, height,
+                        west, south, east, north, polygon)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    event["eventid"], i["intensity"], i["width"], i["height"],
+                    w, s, e, n,
+                    json.dumps(i["polygon"], separators=(",", ":")),
+                ))
+
 
             log.info(
                 "[Earthquake Backend] Normalized %s (%s -- %s)",
                 props["eventid"], events[-1]["initialdate"], events[-1]["enddate"],
             )
+            
+            # DB
+            
 
         return events
     
@@ -108,7 +159,8 @@ def call_gdacs_earthquake(year: int, month: int, day: int):
     start_of_day = now.replace(year=year, month=month, day=day, hour=0, minute=0, second=0, microsecond=0)
     search = search_params("EQ", start_of_day.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "red;orange")
     gdacs_info = httpx.get(call_gdacs(search_params=search), timeout=10).json()
-    result = gdacs_extract(gdacs_info=gdacs_info)
+    result = gdacs_extract(gdacs_info=gdacs_info, database=database)
+    database.connection.commit()
     return result
         
                 

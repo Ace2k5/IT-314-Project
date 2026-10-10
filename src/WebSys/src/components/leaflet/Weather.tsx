@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
 import { Marker, Popup } from 'react-leaflet'
+import { getWeatherCached } from "../cache";
+import type { WeatherMap } from "../cache";
 import sunnyIcon from './map_assets/sunny.png'
 import stormyIcon from './map_assets/stormy.png'
 import rainyIcon from './map_assets/rainy.png'
@@ -8,23 +10,13 @@ import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
 import L from 'leaflet';
 
-type WeatherResponse = {
-                "latitude": number,
-                "longitude": number,
-                "temperature": number,
-                "temperature_unit": string,
-                "weather": string,
-                "weather_icon": string,
-                "fetched_at": number
-}
-
 type Zoom = {
     currentZoom: number
 }
 
 type location = {
   city: String,
-  weather: "sunny" | "stormy" | "rainy" | "cloudy",
+  weather: "sunny" | "stormy" | "rainy" | "cloudy" | "snowy",
   temperature: number,
   temperature_icon: String
 
@@ -49,74 +41,46 @@ const icon = ({city, weather, temperature, temperature_icon}: location) => (L.di
   }))
 
 export function Weather({currentZoom}: Zoom){
-    const [weatherDetailed, setWeatherDetailed] = useState<WeatherResponse | null> (null) /* Both are for the map */
-    const [weather, setWeather] = useState<WeatherResponse | null> (null) /* Both are for the map */
+    const [weatherDetailed, setWeatherDetailed] = useState<WeatherMap | null> (null) /* Both are for the map */
+    const [weather, setWeather] = useState<WeatherMap | null> (null) /* Both are for the map */
     const backend = BackendConnection()
-    const [requested, setRequested] = useState(false)
-    const [requestedDetail, setDetail] = useState(false)
-
-    const get_weather = async (is_detailed: boolean) => {
-    if (is_detailed){
-        const detail = await backend.GetWeather(true)
-        if (Object.keys(detail).length === 0) {
-        backend.Log("[Frontend] Detailed weather has nothing to display yet.")
-        }
-        else {
-        console.log("[Frontend] Detailed Weather:", detail)
-        setWeatherDetailed(detail)
-        }
-    }
-    else {
-        if (Object.keys(weather).length === 0) {
-        backend.Log("[Frontend] Weather has nothing to display yet.")
-        }
-        {
-        const normal = await backend.GetWeather(false)
-        console.log("[Frontend] Normal Weather:", normal)
-        setWeather(normal)
-        }
-    }
-    }
 
     useEffect(() => {
-    console.log("Map mounted")
-    if (requested) {
-        console.log("Map has been requested already, ignoring...")
+    let cancelled = false
+
+    const load = async () => {
+        const [detailed, normal] = await Promise.all([
+            getWeatherCached(true),
+            getWeatherCached(false),
+        ])
+        if (cancelled) return
+        setWeatherDetailed(detailed)
+        setWeather(normal)
     }
-    else if (!requested && currentZoom < 12) {
-        get_weather(false)
-        setRequested(true)
-    }
-    if (requestedDetail) {
-        console.log("Map has been requested already, ignoring...")
-    }
-    else if (!requestedDetail && currentZoom >= 12){
-        get_weather(true)
-        setDetail(true)
-    }
-    }, [currentZoom])
+
+    load()
+    return () => { cancelled = true }
+    }, [])
+
+    const active = currentZoom >= 12 ? weatherDetailed : weather
+    if (!active) return null
 
     return (
         <>
-        {currentZoom >= 12 && (weatherDetailed && weather) ?
-        
-        Object.entries(weatherDetailed).map(([city, info]) => (
-        <Marker position={[info["latitude"], info["longitude"]]} icon={icon({city: city, weather: info["weather_icon"], temperature: info["temperature"], temperature_icon: info["temperature_unit"]})}>
-        <Popup>
-            {city}
-        </Popup>
-        </Marker>
-        ))
-        :
-        Object.entries(weather).map(([city, info]) => (
-        <Marker position={[info["latitude"], info["longitude"]]} icon={icon({city: city, weather: info["weather_icon"], temperature: info["temperature"], temperature_icon: info["temperature_unit"]})}>
-        <Popup>
-            {city}
-        </Popup>
-        </Marker>
-                )
-            )
-        }
+            {Object.entries(active).map(([city, info]) => (
+                <Marker
+                    key={city}
+                    position={[info.latitude, info.longitude]}
+                    icon={icon({
+                        city,
+                        weather: info.weather_icon,
+                        temperature: info.temperature,
+                        temperature_icon: info.temperature_unit,
+                    })}
+                >
+                    <Popup>{city}</Popup>
+                </Marker>
+            ))}
         </>
-        )
-    }
+    )
+}

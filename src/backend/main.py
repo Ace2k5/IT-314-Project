@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api import callAPI
 from backend import logger
+from backend.sql import db
 from io import StringIO
 import logging
 
@@ -16,11 +17,11 @@ app.add_middleware(
 
 stringIO = StringIO()
 logger.setup_log(stringIO)
-
+database = db.Database()
 log = logging.getLogger("__name__")
 log.info("[Server started]")
 
 callAPI.weather_coroutes(app)
-callAPI.gdacs(app)
+callAPI.gdacs(app, database)
 callAPI.check_status(app)
 callAPI.process_log(app, stringIO)

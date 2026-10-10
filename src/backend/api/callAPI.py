@@ -6,6 +6,7 @@ from backend.geography import locations
 from fastapi import FastAPI
 from backend import errors
 import time
+import sqlite3
 
 log = logging.getLogger(__name__)
 last_datetime = 0
@@ -98,7 +99,7 @@ def weather_coroutes(app : FastAPI):
             log.info("[Cache] Returning region saved cache.")
             return weather_region_cache
         
-def gdacs(app: FastAPI):
+def gdacs(app: FastAPI, database):
     @app.post("/earthquake")
     def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
         log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
@@ -106,7 +107,7 @@ def gdacs(app: FastAPI):
         month = EarthquakeDate.month
         day = EarthquakeDate.day
         log.info("[Earthquake Backend Information] Looking for")
-        result = utilAPI.call_gdacs_earthquake(year, month, day)
+        result = utilAPI.call_gdacs_earthquake(year, month, day, database)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
         else:
