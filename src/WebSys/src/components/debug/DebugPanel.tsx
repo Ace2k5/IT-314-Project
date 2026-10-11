@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
-import { Earthquake } from "../leaflet/Earthquake";
+import { Earthquake } from "../leaflet/EarthquakeDebug";
+import { Weather } from "../leaflet/Weather";
 
 
 

@@ -6,8 +6,11 @@ from pprint import pprint
 import logging
 import sqlite3
 import json
+import calendar
+from shapely.geometry import MultiPoint
 
 log = logging.getLogger("__name__")
+
 
 
 def call_openmateo(position: dict[str, float]):
@@ -15,8 +18,39 @@ def call_openmateo(position: dict[str, float]):
     return f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
 
 
+
+
+
+def check_earthquake_db(database, date: datetime.datetime | None = None):
+    if date is None:
+        sql, params = "SELECT 1 FROM Earthquake LIMIT 1", ()
+        log_msg = "all pre-existing records"
+    else:
+        last_day = calendar.monthrange(date.year, date.month)[1]
+        date_init = datetime.datetime(date.year, date.month, 1, 0, 0, 0)
+        date_end  = datetime.datetime(date.year, date.month, last_day, 23, 59, 59)
+        sql = "SELECT * FROM Earthquake WHERE initialdate >= ? AND enddate <= ?"
+        params = (date_init.isoformat(), date_end.isoformat())
+        log_msg = f"{date_init} -- {date_end}"
+
+    database.cursor.execute(sql, params)
+    found = database.cursor.fetchall()
+    if found:
+        log.info("[Earthquake Backend] Found an event for %s, returning...", log_msg)
+        return found
+    log.info("[Earthquake Backend] No event found for %s, returning None, ensure Frontend handles None.", log_msg)
+    return None
+
+
 def call_gdacs_earthquake(year: int, month: int, day: int, database):
     log.info(f"[Backend Earthquake] Fetching Earthquake information from GDACS.")
+        
+    def simplify_coordinate(polygon: list[list[float]]) -> list[list[float]]:
+        """Returns a convex hull of 'polygon', or None for a degenerate input."""
+        hull = MultiPoint([tuple(p) for p in polygon]).convex_hull
+        return [list(coord) for coord in hull.exterior.coords]
+        
+        
     def call_gdacs(search_params: dict[str, str]):
         url_search = "https://www.gdacs.org/gdacsapi/api/Events/geteventlist/SEARCH?"
         query = ""
@@ -49,7 +83,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
         }
         return params
     
-    def flatten_to_ring(geom: dict) -> list[list[float]]:
+    def _flatten_to_ring(geom: dict) -> list[list[float]]:
         t = geom["type"]
         c = geom["coordinates"]
 
@@ -88,20 +122,22 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
 
                 w, s, e, n = geometry["bbox"]
                 mid_lat = math.radians((s + n) / 2)
+                raw_polygon = _flatten_to_ring(geometry["geometry"])
+                hull = simplify_coordinate(polygon=raw_polygon)
+                if hull is None:
+                    log.warning("[Earthquake Backend] Outer points of the Earthquake could not be resolved, please check ./src/backend/api/utilAPI.py and debug. Intensities[n]['hull'] will be None, ensure Frontend handles None.")
                 intensities.append({
                     "intensity": gprops["intensity"],
                     "geom_type": geometry["geometry"]["type"],
                     "width":  (e - w) * 111 * math.cos(mid_lat),
                     "height": (n - s) * 111,
                     "bbox": [w, s, e, n],
-                    "polygon":  flatten_to_ring(geometry["geometry"])
+                    "hull": hull
                 })
 
             if not intensities:
                 continue
 
-            from_date = props["fromdate"]
-            to_date = props["todate"]
 
             event = {
                 "eventid":      props["eventid"],
@@ -109,8 +145,8 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                 "severity":     props["severitydata"]["severity"],
                 "severitytext": props["severitydata"]["severitytext"],
                 "alertlevel":   props["alertlevel"],
-                "initialdate":  from_date,
-                "enddate":      to_date,
+                "initialdate":  props["fromdate"],
+                "enddate":      props["todate"],
                 "intensities":  intensities,
             }
             
@@ -157,6 +193,11 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     
     now = datetime.datetime.now()
     start_of_day = now.replace(year=year, month=month, day=day, hour=0, minute=0, second=0, microsecond=0)
+    
+    cached = check_earthquake_db(database, datetime.datetime(year, month, day, 0, 0, 1))
+    if cached:
+        return cached
+        
     search = search_params("EQ", start_of_day.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "red;orange")
     gdacs_info = httpx.get(call_gdacs(search_params=search), timeout=10).json()
     result = gdacs_extract(gdacs_info=gdacs_info, database=database)
@@ -169,8 +210,4 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
         
 
 if __name__ == "__main__":
-    TEMP_URL = "https://api.open-meteo.com/v1/forecast?latitude=10.3333&longitude=123.75&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
-    now = datetime.datetime.now()
-    start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
-    result = call_gdacs_earthquake(year=2026, month=1, day=1)
-    pprint(result)
+    print(datetime.datetime.now())

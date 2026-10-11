@@ -20,15 +20,17 @@ let location_cache: WeatherMap | null = null;
 let region_cache: WeatherMap | null = null;
 let init_promise: Promise<void> | null = null;
 
+
+
 async function initCache(){
-    backend.Log("[Frontend Cache] Initializing Cache...")
+    backend.Log("[Frontend Weather Cache] Initializing Cache...")
     const [detailed, not_detailed] = await Promise.all([
         backend.GetWeather(true),
         backend.GetWeather(false),
     ]);
     location_cache = detailed
     region_cache = not_detailed
-    backend.Log("[Frontend Cache] Cache initialized...")
+    backend.Log("[Frontend Weather Cache] Cache initialized...")
 }
 
 function ensureInit(){
@@ -37,7 +39,7 @@ function ensureInit(){
 }
 
 async function updateCache(){
-    backend.Log("[Frontend Cache] Updating cache...")
+    backend.Log("[Frontend Weather Cache] Updating cache...")
     const [detailed, not_detailed] = await Promise.all([
         backend.GetWeather(true),
         backend.GetWeather(false),
@@ -57,7 +59,7 @@ export async function getWeatherCached(is_detailed: boolean){
     if (cached) {
         const anyEntry = Object.values(cached)[0]
         if (anyEntry && Date.now() - anyEntry.fetched_at < timeMs) {
-            backend.Log("[Frontend Cache] Cache still valid, returning cache...")
+            backend.Log("[Frontend Weather Cache] Cache still valid, returning cache...")
             return cached
         }
     }

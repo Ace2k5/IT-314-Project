@@ -113,6 +113,11 @@ def gdacs(app: FastAPI, database):
         else:
             log.info(f"[Earthquake Information]: {result}")
         return result
+    
+    @app.get("/init_earthquake")
+    def init_earthquake():
+        response = utilAPI.check_earthquake_db(database=database, date=None)
+        return response
         
 def check_status(app : FastAPI):
     @app.get("/status")
@@ -141,18 +146,27 @@ def process_log(app : FastAPI, stringIO):
         
         
 if "__main__" == __name__:
-    def helper_func(loc: dict[str, dict[str, float]]):
-        dictionary_of_location = dict()
-        for location, position in loc.items():
-            weather = ""
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore" # type: ignore
-            response = httpx.get(url)
-            data = response.json()
-            dictionary_of_location[location] = {
-                "latitude": position['latitude'],
-                "longitude": position['longitude'],
-                "temperature": data["current"]["temperature_2m"],
-                "temperature_unit": data["current_units"]["temperature_2m"],
-                "weather": data["current"]["weather_code"],
-            }
-        return dictionary_of_location
+    from backend.sql import db
+    from pprint import pprint
+    import asyncio
+    import logging
+    from backend import logger
+    from io import StringIO
+    
+    log = logging.getLogger(__name__)
+    logger.setup_log(StringIO())
+    app = FastAPI()
+    database = db.Database()
+    async def test():
+        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
+        year = 2026
+        month = 6
+        day = 7
+        log.info("[Earthquake Backend Information] Looking for")
+        result = await utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
+        if not result:
+            log.info("[Earthquake Information]: Could not grab anything.")
+        else:
+            log.info(f"[Earthquake Information]: {result}")
+        log.info(result)
+    asyncio.run(test())

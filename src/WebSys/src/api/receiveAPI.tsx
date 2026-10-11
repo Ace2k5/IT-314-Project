@@ -1,4 +1,4 @@
-import type { WeatherMap } from "../components/cache"
+import type { WeatherMap } from "../cache/CacheWeather"
 
 type Dates = {
     year: number,

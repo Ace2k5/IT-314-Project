@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
 import { Marker, Popup } from 'react-leaflet'
-import { getWeatherCached } from "../cache";
-import type { WeatherMap } from "../cache";
+import { getWeatherCached } from "../../cache/CacheWeather";
+import type { WeatherMap } from "../../cache/CacheWeather";
 import sunnyIcon from './map_assets/sunny.png'
 import stormyIcon from './map_assets/stormy.png'
 import rainyIcon from './map_assets/rainy.png'
