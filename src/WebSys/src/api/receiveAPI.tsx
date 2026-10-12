@@ -63,6 +63,14 @@ export const BackendConnection = () => ({
             console.log("OK: Earthquake")
         }
         return await response.json()
+    },
+    InitEarthquake: async () => {
+        const response = await fetch("http://localhost:9999/init_earthquake")
+        if (!response){
+            console.log("[Frontend] Failed to fetch Earthquake SQL entry, this means there is not a single entry.")
+            BackendConnection().Log("[Frontend] Failed to fetch Earthquake SQL entry, this means there is not a single entry.")
+        }
+        return await response.json()
     }
 
 

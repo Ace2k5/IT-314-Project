@@ -48,7 +48,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     def simplify_coordinate(polygon: list[list[float]]) -> list[list[float]]:
         """Returns a convex hull of 'polygon', or None for a degenerate input."""
         hull = MultiPoint([tuple(p) for p in polygon]).convex_hull
-        return [list(coord) for coord in hull.exterior.coords]
+        return [list(coord) for coord in hull.exterior.coords] # type: ignore[attr-defined]
         
         
     def call_gdacs(search_params: dict[str, str]):
@@ -98,7 +98,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
 
         raise ValueError(f"Unhandled geometry type: {t}")
 
-    async def gdacs_extract(gdacs_info: dict[str, Any], database) -> list[dict[str, Any]]:
+    def gdacs_extract(gdacs_info: dict[str, Any], database) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = []
 
         for feature in gdacs_info["features"]:
@@ -132,6 +132,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                     "width":  (e - w) * 111 * math.cos(mid_lat),
                     "height": (n - s) * 111,
                     "bbox": [w, s, e, n],
+                    "polygon": raw_polygon,
                     "hull": hull
                 })
 
@@ -169,15 +170,18 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
 
             for i in intensities:
                 w, s, e, n = i["bbox"]
+                polygon = i.get("polygon")
+                hull = i.get("hull")
                 database.cursor.execute("""
                     INSERT INTO Intensity
                         (eventid, intensity, width, height,
-                        west, south, east, north, polygon)
+                        west, south, east, north, polygon, hull)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     event["eventid"], i["intensity"], i["width"], i["height"],
                     w, s, e, n,
-                    json.dumps(i["polygon"], separators=(",", ":")),
+                    json.dumps(polygon, separators=(",", ":")) if polygon is not None else None,
+                    json.dumps(hull, separators=(",", ":")) if hull is not None else None
                 ))
 
 

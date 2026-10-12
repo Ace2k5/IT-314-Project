@@ -25,7 +25,7 @@ class Database:
                 intensity_id  INTEGER PRIMARY KEY AUTOINCREMENT,
                 eventid       TEXT NOT NULL,
                 intensity     REAL,
-                geom_type     TEXT, --'Point' | 'Polygon' | 'MultiPolygon'
+                geom_type     TEXT, -- 'Point' | 'Polygon' | 'MultiPolygon'
                 width         REAL,
                 height        REAL,
                 west          REAL,
@@ -33,6 +33,7 @@ class Database:
                 east          REAL,
                 north         REAL,
                 polygon       TEXT,   -- JSON-encoded coordinates
+                hull          TEXT,   -- JSON-encoded coordinates
                 FOREIGN KEY (eventid) REFERENCES Earthquake(eventid)
                     ON DELETE CASCADE
             );                 

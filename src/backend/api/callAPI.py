@@ -99,6 +99,30 @@ def weather_coroutes(app : FastAPI):
             log.info("[Cache] Returning region saved cache.")
             return weather_region_cache
         
+        
+def serialize_intensity(i: dict) -> dict:
+    return {
+        "intensity": i["intensity"],
+        "geom_type": i["geom_type"],
+        "width":     i["width"],
+        "height":    i["height"],
+        "bbox":      i["bbox"],
+        "hull":      i.get("hull"),
+    }
+
+
+def serialize_event(e: dict) -> dict:
+    return {
+        "eventid":      e["eventid"],
+        "description":  e["description"],
+        "severity":     e["severity"],
+        "severitytext": e["severitytext"],
+        "alertlevel":   e["alertlevel"],
+        "initialdate":  e["initialdate"],
+        "enddate":      e["enddate"],
+        "intensities":  [serialize_intensity(i) for i in e["intensities"]],
+    }        
+
 def gdacs(app: FastAPI, database):
     @app.post("/earthquake")
     def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
@@ -107,12 +131,13 @@ def gdacs(app: FastAPI, database):
         month = EarthquakeDate.month
         day = EarthquakeDate.day
         log.info("[Earthquake Backend Information] Looking for")
-        result = utilAPI.call_gdacs_earthquake(year, month, day, database)
+        result: list[dict] | None = utilAPI.call_gdacs_earthquake(year, month, day, database) # type: ignore
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
-        else:
-            log.info(f"[Earthquake Information]: {result}")
-        return result
+            return {"events": []}
+        log.info(f"[Earthquake Information]: {result}")
+            
+        return {"events": [serialize_event(e) for e in result]} # type: ignore
     
     @app.get("/init_earthquake")
     def init_earthquake():
@@ -169,4 +194,6 @@ if "__main__" == __name__:
         else:
             log.info(f"[Earthquake Information]: {result}")
         log.info(result)
-    asyncio.run(test())
+        return result
+    result = asyncio.run(test())
+    pprint(result)
