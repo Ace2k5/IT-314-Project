@@ -9,9 +9,9 @@ import time
 import sqlite3
 
 log = logging.getLogger(__name__)
-last_datetime = 0
-weather_location_cache = dict()
-weather_region_cache = dict()
+last_datetime: float = 0.0
+weather_location_cache: dict[str, dict[str, str | int]] = dict()
+weather_region_cache: dict[str, dict[str, str | int]] = dict()
 
 def weather_coroutes(app : FastAPI):
     weather_icons = {
@@ -52,9 +52,9 @@ def weather_coroutes(app : FastAPI):
         97: "stormy",
         99: "stormy",
     }
-    threshold = 180 * 1000
+    threshold = 180
     
-    def helper_func(loc: dict[str, dict[str, float]], fetched_at: float):
+    def helper_func(loc: dict[str, dict[str, float]]):
         log.info("[Weather] Getting weather...")
         dictionary_of_location = dict()
         for location, position in loc.items():
@@ -69,7 +69,6 @@ def weather_coroutes(app : FastAPI):
                 "temperature_unit": data["current_units"]["temperature_2m"],
                 "weather": data["current"]["weather_code"],
                 "weather_icon": weather_icons[data["current"]["weather_code"]],
-                "fetched_at": fetched_at
             }
         return dictionary_of_location
     
@@ -79,25 +78,23 @@ def weather_coroutes(app : FastAPI):
         log.info("[Backend Info] Grabbing weather information...")
         log.info("[Backend Info] Initializing both caches.")
         
-        current_datetime = time.time() * 1000
-        if (current_datetime - last_datetime) > threshold:
+        if utilAPI.check_threshold(type_of_event="weather", threshold=threshold):
             log.info("[Cache] Conditional met for time, cache now updating...")
-            dictionary_of_locations = helper_func(locations.LOCATIONS, current_datetime)
+            dictionary_of_locations = helper_func(locations.LOCATIONS)
             weather_location_cache = dictionary_of_locations
             log.info("[Cache] Location cache updated.")
-            dictionary_of_locations = helper_func(locations.REGIONS, current_datetime)
+            dictionary_of_locations = helper_func(locations.REGIONS)
             weather_region_cache = dictionary_of_locations
             log.info("[Cache] Region cache updated.")
             
-            last_datetime = current_datetime
         else:
             log.info("[Cache] Threshold not met, returning existing cache.")
-        if WeatherInfo.is_detailed == True:
-            log.info("[Cache] Returning location saved cache.")
-            return weather_location_cache
-        else:
-            log.info("[Cache] Returning region saved cache.")
-            return weather_region_cache
+            if WeatherInfo.is_detailed == True:
+                log.info("[Cache] Returning location saved cache.")
+                return weather_location_cache
+            else:
+                log.info("[Cache] Returning region saved cache.")
+                return weather_region_cache
         
         
 def serialize_intensity(i: dict) -> dict:
@@ -131,13 +128,13 @@ def gdacs(app: FastAPI, database):
         month = EarthquakeDate.month
         day = EarthquakeDate.day
         log.info("[Earthquake Backend Information] Looking for")
-        result: list[dict] | None = utilAPI.call_gdacs_earthquake(year, month, day, database) # type: ignore
+        result: list[dict] | None = utilAPI.call_gdacs_earthquake(year, month, day, database)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
             return {"events": []}
         log.info(f"[Earthquake Information]: {result}")
             
-        return {"events": [serialize_event(e) for e in result]} # type: ignore
+        return {"events": [serialize_event(e) for e in result]}
     
     @app.get("/init_earthquake")
     def init_earthquake():

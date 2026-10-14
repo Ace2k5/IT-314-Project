@@ -9,9 +9,10 @@ let init_promise: Promise<void> | null = null;
 async function initCache() {
     backend.Log("[Frontend Earthquake Cache] Cache intilializing...")
     const response = await backend.InitEarthquake()
-    if (!response) {
+    if (!response || response.length === 0) {
         backend.Log("[Frontend Earthquake Cache] Response for getting the initial Earthquake Data returned nothing.")
     }
+    
 }
 
 function ensureInit() {

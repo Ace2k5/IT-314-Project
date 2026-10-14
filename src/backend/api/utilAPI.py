@@ -4,12 +4,13 @@ import httpx
 import math
 from pprint import pprint
 import logging
-import sqlite3
 import json
 import calendar
 from shapely.geometry import MultiPoint
+import time
 
-log = logging.getLogger("__name__")
+log = logging.getLogger(__name__)
+_time_lookup: dict[str, float] = dict()
 
 
 
@@ -128,7 +129,6 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                     log.warning("[Earthquake Backend] Outer points of the Earthquake could not be resolved, please check ./src/backend/api/utilAPI.py and debug. Intensities[n]['hull'] will be None, ensure Frontend handles None.")
                 intensities.append({
                     "intensity": gprops["intensity"],
-                    "geom_type": geometry["geometry"]["type"],
                     "width":  (e - w) * 111 * math.cos(mid_lat),
                     "height": (n - s) * 111,
                     "bbox": [w, s, e, n],
@@ -176,7 +176,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                     INSERT INTO Intensity
                         (eventid, intensity, width, height,
                         west, south, east, north, polygon, hull)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     event["eventid"], i["intensity"], i["width"], i["height"],
                     w, s, e, n,
@@ -209,9 +209,33 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     return result
         
                 
-            
+                
+# time
+
+def check_threshold(type_of_event: str, threshold: float) -> bool:
+    """
+    Args:
+        type_of_event (str): Type of event (e.g Earthquake, Weather...)
+        threshold (int): (The threshold of time in seconds)
+
+    Returns:
+        bool: If True, will send to frontend, else, old cache still valid.
+    """
+    now = time.monotonic()
+    last = _time_lookup.get(type_of_event)
+    if last is None or now - last > threshold:
+        log.info("[Backend Time Lookup] Updating cache for %s...", type_of_event)
+        _time_lookup[type_of_event] = now
+        return True
+    log.info("[Backend Time Lookup] %s cache is still valid.", type_of_event)
+    return False
+        
         
         
 
 if __name__ == "__main__":
-    print(datetime.datetime.now())
+    from backend.sql.db import Database
+    database = Database()
+    call_gdacs_earthquake(2018, 1, 1, database)
+    database.test_db()
+    

@@ -25,7 +25,6 @@ class Database:
                 intensity_id  INTEGER PRIMARY KEY AUTOINCREMENT,
                 eventid       TEXT NOT NULL,
                 intensity     REAL,
-                geom_type     TEXT, -- 'Point' | 'Polygon' | 'MultiPolygon'
                 width         REAL,
                 height        REAL,
                 west          REAL,
@@ -41,3 +40,12 @@ class Database:
                             '''
         )
         self.connection.commit()
+        
+    def test_db(self):
+        self.cursor.execute("SELECT * FROM Earthquake")
+        print(self.cursor.fetchall())
+        
+        
+if "__main__" == __name__:
+    sql = Database()
+    sql.test_db()
