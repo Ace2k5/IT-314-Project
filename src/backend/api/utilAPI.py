@@ -23,16 +23,16 @@ def call_openmateo(position: dict[str, float]):
 
 
 def check_earthquake_db(database, date: datetime.datetime | None = None):
+    log.info("[Earthquake Backend] Checking SQL Database before calling GDACS...")
     if date is None:
         sql, params = "SELECT 1 FROM Earthquake LIMIT 1", ()
         log_msg = "all pre-existing records"
     else:
-        last_day = calendar.monthrange(date.year, date.month)[1]
         date_init = datetime.datetime(date.year, date.month, 1, 0, 0, 0)
-        date_end  = datetime.datetime(date.year, date.month, last_day, 23, 59, 59)
-        sql = "SELECT * FROM Earthquake WHERE initialdate >= ? AND enddate <= ?"
-        params = (date_init.isoformat(), date_end.isoformat())
-        log_msg = f"{date_init} -- {date_end}"
+        now  = datetime.datetime.now()
+        sql = "SELECT * FROM Earthquake WHERE initialdate <= ? AND enddate >= ?"
+        params = (now.isoformat(), date_init.isoformat())
+        log_msg = f"{date_init} -- {now}"
 
     database.cursor.execute(sql, params)
     found = database.cursor.fetchall()
@@ -44,7 +44,6 @@ def check_earthquake_db(database, date: datetime.datetime | None = None):
 
 
 def call_gdacs_earthquake(year: int, month: int, day: int, database):
-    log.info(f"[Backend Earthquake] Fetching Earthquake information from GDACS.")
         
     def simplify_coordinate(polygon: list[list[float]]) -> list[list[float]]:
         """Returns a convex hull of 'polygon', or None for a degenerate input."""
@@ -100,6 +99,7 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
         raise ValueError(f"Unhandled geometry type: {t}")
 
     def gdacs_extract(gdacs_info: dict[str, Any], database) -> list[dict[str, Any]]:
+        log.info(f"[Backend Earthquake] Fetching Earthquake information from GDACS.")
         events: list[dict[str, Any]] = []
 
         for feature in gdacs_info["features"]:
@@ -132,7 +132,6 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                     "width":  (e - w) * 111 * math.cos(mid_lat),
                     "height": (n - s) * 111,
                     "bbox": [w, s, e, n],
-                    "polygon": raw_polygon,
                     "hull": hull
                 })
 
@@ -175,12 +174,11 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                 database.cursor.execute("""
                     INSERT INTO Intensity
                         (eventid, intensity, width, height,
-                        west, south, east, north, polygon, hull)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        west, south, east, north, hull)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     event["eventid"], i["intensity"], i["width"], i["height"],
                     w, s, e, n,
-                    json.dumps(polygon, separators=(",", ":")) if polygon is not None else None,
                     json.dumps(hull, separators=(",", ":")) if hull is not None else None
                 ))
 

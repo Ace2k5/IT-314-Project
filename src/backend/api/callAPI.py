@@ -5,6 +5,7 @@ from backend.request_models import getMessage
 from backend.geography import locations
 from fastapi import FastAPI
 from backend import errors
+import datetime
 import time
 import sqlite3
 
@@ -89,36 +90,12 @@ def weather_coroutes(app : FastAPI):
             
         else:
             log.info("[Cache] Threshold not met, returning existing cache.")
-            if WeatherInfo.is_detailed == True:
-                log.info("[Cache] Returning location saved cache.")
-                return weather_location_cache
-            else:
-                log.info("[Cache] Returning region saved cache.")
-                return weather_region_cache
-        
-        
-def serialize_intensity(i: dict) -> dict:
-    return {
-        "intensity": i["intensity"],
-        "geom_type": i["geom_type"],
-        "width":     i["width"],
-        "height":    i["height"],
-        "bbox":      i["bbox"],
-        "hull":      i.get("hull"),
-    }
-
-
-def serialize_event(e: dict) -> dict:
-    return {
-        "eventid":      e["eventid"],
-        "description":  e["description"],
-        "severity":     e["severity"],
-        "severitytext": e["severitytext"],
-        "alertlevel":   e["alertlevel"],
-        "initialdate":  e["initialdate"],
-        "enddate":      e["enddate"],
-        "intensities":  [serialize_intensity(i) for i in e["intensities"]],
-    }        
+        if WeatherInfo.is_detailed == True:
+            log.info("[Cache] Returning location saved cache.")
+            return weather_location_cache
+        else:
+            log.info("[Cache] Returning region saved cache.")
+            return weather_region_cache
 
 def gdacs(app: FastAPI, database):
     @app.post("/earthquake")
@@ -127,19 +104,14 @@ def gdacs(app: FastAPI, database):
         year = EarthquakeDate.year
         month = EarthquakeDate.month
         day = EarthquakeDate.day
-        log.info("[Earthquake Backend Information] Looking for")
+        log.info("[Earthquake Backend Information] Looking for %s", f"{year}-{month}-{day}")
         result: list[dict] | None = utilAPI.call_gdacs_earthquake(year, month, day, database)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
             return {"events": []}
         log.info(f"[Earthquake Information]: {result}")
-            
-        return {"events": [serialize_event(e) for e in result]}
-    
-    @app.get("/init_earthquake")
-    def init_earthquake():
-        response = utilAPI.check_earthquake_db(database=database, date=None)
-        return response
+        return result
+        
         
 def check_status(app : FastAPI):
     @app.get("/status")
@@ -185,7 +157,7 @@ if "__main__" == __name__:
         month = 6
         day = 7
         log.info("[Earthquake Backend Information] Looking for")
-        result = await utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
+        result = utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
         else:
