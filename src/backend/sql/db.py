@@ -5,8 +5,8 @@ from pathlib import Path
 class Database:
     def __init__(self):
         self.connection = sqlite3.connect(Path(__file__).parent / "Database.db", check_same_thread=False)
-        self.cursor = self.connection.cursor()
         self.connection.row_factory = sqlite3.Row
+        self.cursor = self.connection.cursor()
         self._init_db()
     
     def _init_db(self):

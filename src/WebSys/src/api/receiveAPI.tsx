@@ -26,12 +26,19 @@ export const BackendConnection = () => ({
         console.log(`OK`)
         return await response.json()
     },
-    GetWeather: async (is_detailed: Boolean) => {
-        const response = await fetch("http://localhost:9999/weather", {
-            method: "POST",
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({is_detailed: is_detailed})
-        })
+    GetWeatherLow: async () => {
+        const response = await fetch("http://localhost:9999/weather/low")
+        if (!response){
+            BackendConnection().Log("[Frontend] Failed to get weather information.")
+        }
+        else{
+            BackendConnection().Log(`[Frontend] OK: Weather`)
+            console.log(`[Frontend] OK: Weather`)
+        }
+        return await (response.json()) as WeatherMap;
+    },
+    GetWeatherHigh: async () => {
+        const response = await fetch("http://localhost:9999/weather/high")
         if (!response){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }

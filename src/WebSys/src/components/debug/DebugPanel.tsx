@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
-import { Earthquake } from "../leaflet/EarthquakeDebug";
+import { EarthquakeDebug } from "../leaflet/Earthquake";
 import { Weather } from "../leaflet/Weather";
 
 
@@ -26,7 +26,7 @@ export function CheckStatus(){
             </div>
 
             <div className="earthquakeStatus">
-                <Earthquake/>
+                <EarthquakeDebug/>
 
             </div>
         </div>

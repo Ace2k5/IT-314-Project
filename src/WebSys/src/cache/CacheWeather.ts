@@ -16,55 +16,52 @@ export type WeatherMap = Record<string, WeatherEntry>
 
 const timeMs = 180000
 const backend = BackendConnection()
-let location_cache: WeatherMap | null = null;
-let region_cache: WeatherMap | null = null;
-let init_promise: Promise<void> | null = null;
+let location_cache: WeatherMap | null = null
+let region_cache: WeatherMap | null = null
+let location_fetched_at = 0
+let region_fetched_at = 0
+let location_promise: Promise<void> | null = null
+let region_promise: Promise<void> | null = null
 
-
-
-async function initCache(){
-    backend.Log("[Frontend Weather Cache] Initializing Cache...")
-    const [detailed, not_detailed] = await Promise.all([
-        backend.GetWeather(true),
-        backend.GetWeather(false),
-    ]);
-    location_cache = detailed
-    region_cache = not_detailed
-    backend.Log("[Frontend Weather Cache] Cache initialized...")
+async function fetchLocation() {
+    backend.Log("[Weather Frontend Cache] Getting zoomed out data...")
+    const data = await backend.GetWeatherHigh()
+    location_cache = data
+    location_fetched_at = Date.now()
 }
 
-function ensureInit(){
-    if (!init_promise) init_promise = initCache()
-        return init_promise
+async function fetchRegion() {
+    backend.Log("[Weather Frontend Cache] Getting zoomed in data...")
+    const data = await backend.GetWeatherLow()
+    region_cache = data
+    region_fetched_at = Date.now()
 }
 
-async function updateCache(){
-    backend.Log("[Frontend Weather Cache] Updating cache...")
-    const [detailed, not_detailed] = await Promise.all([
-        backend.GetWeather(true),
-        backend.GetWeather(false),
-    ]);
-    location_cache = detailed
-    region_cache = not_detailed
-}
-
-
-
-export async function getWeatherCached(is_detailed: boolean){
-    await ensureInit()
-
-    let cached: WeatherMap | null = null
-
-    cached = is_detailed ? location_cache : region_cache
-    if (cached) {
-        const anyEntry = Object.values(cached)[0]
-        if (anyEntry && Date.now() - anyEntry.fetched_at < timeMs) {
-            backend.Log("[Frontend Weather Cache] Cache still valid, returning cache...")
-            return cached
-        }
+function ensureLocation() {
+    if (!location_promise) {
+        location_promise = fetchLocation().finally(() => { location_promise = null })
     }
+    return location_promise
+}
 
-    await updateCache()
-    return is_detailed ? location_cache : region_cache
+function ensureRegion() {
+    if (!region_promise) {
+        region_promise = fetchRegion().finally(() => { region_promise = null })
+    }
+    return region_promise
+}
+
+export async function getWeatherLocation() {
+    if (location_cache && Date.now() - location_fetched_at < timeMs) return location_cache
+    await ensureLocation()
+    backend.Log("[Weather Frontend Cache] Zoomed out data returned cleanly.")
+    return location_cache
+}
+
+export async function getWeatherRegion() {
+    if (region_cache && Date.now() - region_fetched_at < timeMs) return region_cache
+    await ensureRegion()
+    backend.Log("[Weather Frontend Cache] Zoomed in data returned cleanly.")
+    return region_cache
 }
 

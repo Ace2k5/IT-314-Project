@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
 import { Marker, Popup } from 'react-leaflet'
-import { getWeatherCached } from "../../cache/CacheWeather";
+import { getWeatherLocation, getWeatherRegion } from "../../cache/CacheWeather";
 import type { WeatherMap } from "../../cache/CacheWeather";
 import sunnyIcon from './map_assets/sunny.png'
 import stormyIcon from './map_assets/stormy.png'
@@ -43,15 +43,14 @@ const icon = ({city, weather, temperature, temperature_icon}: location) => (L.di
 export function Weather({currentZoom}: Zoom){
     const [weatherDetailed, setWeatherDetailed] = useState<WeatherMap | null> (null) /* Both are for the map */
     const [weather, setWeather] = useState<WeatherMap | null> (null) /* Both are for the map */
-    const backend = BackendConnection()
 
     useEffect(() => {
     let cancelled = false
 
     const load = async () => {
         const [detailed, normal] = await Promise.all([
-            getWeatherCached(true),
-            getWeatherCached(false),
+            getWeatherLocation(),
+            getWeatherRegion(),
         ])
         if (cancelled) return
         setWeatherDetailed(detailed)

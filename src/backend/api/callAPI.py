@@ -55,7 +55,7 @@ def weather_coroutes(app : FastAPI):
     }
     threshold = 180
     
-    def helper_func(loc: dict[str, dict[str, float]]):
+    def fetch_weather_for_all(loc: dict[str, dict[str, float]]):
         log.info("[Weather] Getting weather...")
         dictionary_of_location = dict()
         for location, position in loc.items():
@@ -73,30 +73,29 @@ def weather_coroutes(app : FastAPI):
             }
         return dictionary_of_location
     
-    @app.post("/weather")
-    def get_weather(WeatherInfo : getMessage.WeatherInfo):
-        global weather_location_cache, weather_region_cache, last_datetime  
-        log.info("[Backend Info] Grabbing weather information...")
-        log.info("[Backend Info] Initializing both caches.")
-        
-        if utilAPI.check_threshold(type_of_event="weather", threshold=threshold):
-            log.info("[Cache] Conditional met for time, cache now updating...")
-            dictionary_of_locations = helper_func(locations.LOCATIONS)
-            weather_location_cache = dictionary_of_locations
-            log.info("[Cache] Location cache updated.")
-            dictionary_of_locations = helper_func(locations.REGIONS)
-            weather_region_cache = dictionary_of_locations
-            log.info("[Cache] Region cache updated.")
-            
+    @app.get("/weather/high")
+    def get_weather_high():
+        global weather_location_cache
+        if utilAPI.is_stale("weather_high", threshold):
+            log.info("[Cache] Refreshing high-res weather...")
+            weather_location_cache = fetch_weather_for_all(locations.LOCATIONS)
+            utilAPI.mark_refreshed("weather_high")
         else:
-            log.info("[Cache] Threshold not met, returning existing cache.")
-        if WeatherInfo.is_detailed == True:
-            log.info("[Cache] Returning location saved cache.")
-            return weather_location_cache
-        else:
-            log.info("[Cache] Returning region saved cache.")
-            return weather_region_cache
+            log.info("[Cache] high-res still fresh.")
+        return weather_location_cache
 
+
+    @app.get("/weather/low")
+    def get_weather_low():
+        global weather_region_cache
+        if utilAPI.is_stale("weather_low", threshold):
+            log.info("[Cache] Refreshing low-res weather...")
+            weather_region_cache = fetch_weather_for_all(locations.REGIONS)
+            utilAPI.mark_refreshed("weather_low")
+        else:
+            log.info("[Cache] low-res still fresh.")
+        return weather_region_cache
+    
 def gdacs(app: FastAPI, database):
     @app.post("/earthquake")
     def earthquake(EarthquakeDate : getMessage.EarthquakeDate):

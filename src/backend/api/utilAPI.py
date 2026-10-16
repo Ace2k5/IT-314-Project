@@ -28,19 +28,52 @@ def check_earthquake_db(database, date: datetime.datetime | None = None):
         sql, params = "SELECT 1 FROM Earthquake LIMIT 1", ()
         log_msg = "all pre-existing records"
     else:
-        date_init = datetime.datetime(date.year, date.month, 1, 0, 0, 0)
-        now  = datetime.datetime.now()
+        month_start, month_end = date_range(date)
         sql = "SELECT * FROM Earthquake WHERE initialdate <= ? AND enddate >= ?"
-        params = (now.isoformat(), date_init.isoformat())
-        log_msg = f"{date_init} -- {now}"
+        params = (month_end.isoformat(), month_start.isoformat())
+        log_msg = f"{month_start} -- {month_end}"
 
     database.cursor.execute(sql, params)
-    found = database.cursor.fetchall()
-    if found:
-        log.info("[Earthquake Backend] Found an event for %s, returning...", log_msg)
-        return found
+    events = database.cursor.fetchall()
+    result = []
+    if events:
+        log.info("[Earthquake Backend] Found an event for %s, intensity next.", log_msg)
+        for event in events:
+            database.cursor.execute(
+                "SELECT intensity, width, height, west, south, east, north, hull "
+                "FROM Intensity WHERE eventid = ?",
+                (event["eventid"],),
+            )
+            intensities = [
+                {
+                    "intensity": row["intensity"],
+                    "width":     row["width"],
+                    "height":    row["height"],
+                    "bbox":      [row["west"], row["south"], row["east"], row["north"]],
+                    "hull":      json.loads(row["hull"]) if row["hull"] else None,
+                }
+                for row in database.cursor.fetchall()
+            ]
+            result.append({
+                "eventid":      event["eventid"],
+                "description":  event["description"],
+                "severity":     event["severity"],
+                "severitytext": event["severitytext"],
+                "alertlevel":   event["alertlevel"],
+                "initialdate":  event["initialdate"],
+                "enddate":      event["enddate"],
+                "intensities":  intensities,
+            })
+        return result
+        
     log.info("[Earthquake Backend] No event found for %s, returning None, ensure Frontend handles None.", log_msg)
     return None
+
+def date_range(date: datetime.datetime) -> list[datetime.datetime]:
+    last_day = calendar.monthrange(date.year, date.month)[1]
+    month_start = datetime.datetime(date.year, date.month, 1)
+    month_end   = datetime.datetime(date.year, date.month, last_day)
+    return [month_start, month_end]
 
 
 def call_gdacs_earthquake(year: int, month: int, day: int, database):
@@ -195,13 +228,15 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     
     now = datetime.datetime.now()
     start_of_day = now.replace(year=year, month=month, day=day, hour=0, minute=0, second=0, microsecond=0)
-    
+    month_start, month_end = date_range(start_of_day)
     cached = check_earthquake_db(database, datetime.datetime(year, month, day, 0, 0, 1))
     if cached:
-        return cached
-        
-    search = search_params("EQ", start_of_day.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "red;orange")
+        return cached    
+    search = search_params("EQ", month_start.strftime("%Y-%m-%d"), month_end.strftime("%Y-%m-%d"), "red;orange")
+
+    # When GDACS finds no information about any Earthquake for this specific date, immediate return, no need for the threshold function.
     gdacs_info = httpx.get(call_gdacs(search_params=search), timeout=10).json()
+    # ---------------------------------------------------------------------------------------------------------------------------------
     result = gdacs_extract(gdacs_info=gdacs_info, database=database)
     database.connection.commit()
     return result
@@ -210,23 +245,13 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                 
 # time
 
-def check_threshold(type_of_event: str, threshold: float) -> bool:
-    """
-    Args:
-        type_of_event (str): Type of event (e.g Earthquake, Weather...)
-        threshold (int): (The threshold of time in seconds)
-
-    Returns:
-        bool: If True, will send to frontend, else, old cache still valid.
-    """
+def is_stale(type_of_event: str, threshold: float) -> bool:
     now = time.monotonic()
     last = _time_lookup.get(type_of_event)
-    if last is None or now - last > threshold:
-        log.info("[Backend Time Lookup] Updating cache for %s...", type_of_event)
-        _time_lookup[type_of_event] = now
-        return True
-    log.info("[Backend Time Lookup] %s cache is still valid.", type_of_event)
-    return False
+    return last is None or now - last > threshold
+
+def mark_refreshed(type_of_event: str) -> None:
+    _time_lookup[type_of_event] = time.monotonic()
         
         
         
