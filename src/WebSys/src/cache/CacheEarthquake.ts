@@ -1,6 +1,6 @@
 import { BackendConnection } from "../api/receiveAPI";
 
-type Intensity = {
+export type Intensity = {
     "intensity": number,
     "width":  number,
     "height": number,
@@ -8,7 +8,7 @@ type Intensity = {
     "hull": number,
 }
 
-type Event = {
+export type Event = {
     eventid: string,
     description: string,
     severity: number,
@@ -19,7 +19,7 @@ type Event = {
     intensities: Intensity[];
 };
 
-type EarthquakeMap = Map<number, Event>
+export type EarthquakeMap = Map<number, Event>
 
 export type Dates = {
     year: string,

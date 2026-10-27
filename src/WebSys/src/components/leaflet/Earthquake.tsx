@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
 import { GetEarthquakeData } from '../../cache/CacheEarthquake';
 import type { Dates } from "../../cache/CacheEarthquake";
+import type { Intensity } from "../../cache/CacheEarthquake";
 
 export function EarthquakeData(){
     const [date, setDate] = useState("")
-    const [earthquakeInfo, setEarthquakeInfo] = useState(new Array())
+    const [earthquakeInfo, setEarthquakeInfo] = useState(Array())
+    const [hull, setHull] = useState(new Map())
     const getCache = GetEarthquakeData
     const backend = BackendConnection()
 
@@ -16,8 +18,37 @@ export function EarthquakeData(){
             return
         }
         setEarthquakeInfo(events)
+        let found_intensities = new Map()
+        for (const event of events) {
+            let intensities: Intensity[] = event.intensities
+            for (const intensities_metadata of intensities) {
+                if (intensities_metadata){
+                    if (intensities_metadata.intensity === 4){
+                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
+                    }
+                    else if (intensities_metadata.intensity === 6){
+                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
+                    }
+                    else if (intensities_metadata.intensity === 8){
+                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
+                    }
+                }
+            }
+        }
+
+        console.log("Found Intensities", found_intensities)
+        for (const value in found_intensities.values()){
+            console.log(value)
+        }
+        if (found_intensities.size > 0){
+        setHull(found_intensities)
+        }
+        else{
+            console.log("Intensity Map is empty.")
+        }
     }
-    useEffect(()=> {console.log(earthquakeInfo)}, [earthquakeInfo])
+    useEffect(()=> {console.log(earthquakeInfo)}, [earthquakeInfo.length > 0])
+    useEffect(() => { console.log(hull) }, [hull.size > 0])
 
 
     return(

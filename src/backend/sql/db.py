@@ -43,7 +43,9 @@ class Database:
         
     def test_db(self):
         self.cursor.execute("SELECT * FROM Earthquake")
-        print(self.cursor.fetchall())
+        rows = self.cursor.fetchall()
+        for row in rows:
+            print(row[5])
         
         
 if "__main__" == __name__:
