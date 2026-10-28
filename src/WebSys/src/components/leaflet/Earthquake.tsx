@@ -4,10 +4,9 @@ import { GetEarthquakeData } from '../../cache/CacheEarthquake';
 import type { Dates } from "../../cache/CacheEarthquake";
 import type { Intensity } from "../../cache/CacheEarthquake";
 
-export function EarthquakeData(){
+export function EarthquakeData({hull, setHull}){
     const [date, setDate] = useState("")
     const [earthquakeInfo, setEarthquakeInfo] = useState(Array())
-    const [hull, setHull] = useState(new Map())
     const getCache = GetEarthquakeData
     const backend = BackendConnection()
 
@@ -35,11 +34,6 @@ export function EarthquakeData(){
                 }
             }
         }
-
-        console.log("Found Intensities", found_intensities)
-        for (const value in found_intensities.values()){
-            console.log(value)
-        }
         if (found_intensities.size > 0){
         setHull(found_intensities)
         }
@@ -47,8 +41,9 @@ export function EarthquakeData(){
             console.log("Intensity Map is empty.")
         }
     }
+
     useEffect(()=> {console.log(earthquakeInfo)}, [earthquakeInfo.length > 0])
-    useEffect(() => { console.log(hull) }, [hull.size > 0])
+    useEffect(() => { console.log(hull) }, [hull])
 
 
     return(
@@ -67,15 +62,7 @@ export function EarthquakeData(){
                 if (!year || !month || !day) return
                 getEarthquake({year, month, day})
             }}/>
-        <div className="DisplayEarthquake">
-            {/*earthquakeInfo.length === 0 && */}
-
         </div>
-
-
-        </div>
-
-
         </>
     )
 

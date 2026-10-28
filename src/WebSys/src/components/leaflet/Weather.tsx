@@ -40,7 +40,13 @@ const icon = ({city, weather, temperature, temperature_icon}: location) => (L.di
     `
   }))
 
-export function Weather({currentZoom}: Zoom){
+type MapInformation = {
+    currentZoom: number;
+    setActiveWeather: any;
+    activeWeather: any;
+}
+
+export function Weather({currentZoom, setActiveWeather, activeWeather}: MapInformation){
     const [weatherDetailed, setWeatherDetailed] = useState<WeatherMap | null> (null) /* Both are for the map */
     const [weather, setWeather] = useState<WeatherMap | null> (null) /* Both are for the map */
 
@@ -61,25 +67,8 @@ export function Weather({currentZoom}: Zoom){
     return () => { cancelled = true }
     }, [])
 
-    const active = currentZoom >= 12 ? weatherDetailed : weather
-    if (!active) return null
-
-    return (
-        <>
-            {Object.entries(active).map(([city, info]) => (
-                <Marker
-                    key={city}
-                    position={[info.latitude, info.longitude]}
-                    icon={icon({
-                        city,
-                        weather: info.weather_icon,
-                        temperature: info.temperature,
-                        temperature_icon: info.temperature_unit,
-                    })}
-                >
-                    <Popup>{city}</Popup>
-                </Marker>
-            ))}
-        </>
-    )
+    useEffect(() => {
+        const next = currentZoom >= 12 ? weatherDetailed : weather
+        if (next) setActiveWeather(next)
+    }, [currentZoom, weatherDetailed, weather, setActiveWeather])
 }
