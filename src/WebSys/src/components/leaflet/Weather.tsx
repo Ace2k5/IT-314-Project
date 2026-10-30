@@ -71,4 +71,6 @@ export function Weather({currentZoom, setActiveWeather, activeWeather}: MapInfor
         const next = currentZoom >= 12 ? weatherDetailed : weather
         if (next) setActiveWeather(next)
     }, [currentZoom, weatherDetailed, weather, setActiveWeather])
+
+    return (<></>)
 }

@@ -3,8 +3,10 @@ import { BackendConnection } from "../../api/receiveAPI";
 import { GetEarthquakeData } from '../../cache/CacheEarthquake';
 import type { Dates } from "../../cache/CacheEarthquake";
 import type { Intensity } from "../../cache/CacheEarthquake";
+import type { hull_information } from "./Map";
 
-export function EarthquakeData({hull, setHull}){
+
+export function EarthquakeData({hull, setHull}: hull_information){
     const [date, setDate] = useState("")
     const [earthquakeInfo, setEarthquakeInfo] = useState(Array())
     const getCache = GetEarthquakeData
@@ -48,7 +50,6 @@ export function EarthquakeData({hull, setHull}){
 
     return(
         <>
-        <div className="GetEarthquakeInfo">
             <input
             type="date"
             id="start"
@@ -62,7 +63,6 @@ export function EarthquakeData({hull, setHull}){
                 if (!year || !month || !day) return
                 getEarthquake({year, month, day})
             }}/>
-        </div>
         </>
     )
 
@@ -88,7 +88,7 @@ export function EarthquakeDebug() {
 
     return(
         <>
-        <div className="Test">
+        <div className="EarthquakeDate">
             <label>Start Date</label>
             <input
             type="date"

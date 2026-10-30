@@ -10,6 +10,7 @@ import rainyIcon from './map_assets/rainy.png'
 import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
 import L from 'leaflet';
+import './Map.css'
 
 type Zoom = {
     currentZoom: number
@@ -23,6 +24,11 @@ type location = {
 
 }
 
+export type hull_information = {
+    hull: number[]
+    setHull: React.Dispatch<React.SetStateAction<Map<number, number[][]>>>
+}
+
 const weatherIcons = {
   "sunny": sunnyIcon,
   "stormy": stormyIcon,
@@ -30,6 +36,16 @@ const weatherIcons = {
   "cloudy": cloudyIcon,
   "snowy": snowyIcon
 }
+
+type Info = {
+    latitude: number,
+    longitude: number,
+    weather_icon: string,
+    temperature: number,
+    temperature_unit: string
+}
+
+
 
 const icon = ({city, weather, temperature, temperature_icon}: location) => (L.divIcon({
     html: `
@@ -63,46 +79,52 @@ export function MMap() {
 
   
   return (<>
-    <Weather currentZoom={currentZoom} setActiveWeather={setActiveWeather} activeWeather={activeWeather}/>
-    <EarthquakeData hull={hull} setHull={setHull}/>
-    <MapContainer
-      center={[14.5995, 120.9842]}
-      zoom={6}
-      style={{ height: '50vh', width: '50vw' }}
-    >
-      <MapWatcher setZoom={setZoom}/>
-      <TileLayer
-        url="https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png?key=cb1_402u_1_2b0d51d8f3e9bea980b035cc"
-        attribution="&copy; OpenStreetMap contributors"
-      />
-      {activeWeather && Object.entries(activeWeather).map(([city, info]) => (
-          <Marker
-              key={city}
-              position={[info.latitude, info.longitude]}
-              icon={icon({
-                  city,
-                  weather: info.weather_icon,
-                  temperature: info.temperature,
-                  temperature_icon: info.temperature_unit,
-              })}
-          >
-              <Popup>{city}</Popup>
-          </Marker>
-      ))}
-    {Array.from(hull.values()).map((points, i) => {
-        // points is an array of [lng, lat] pairs.
-        // We need to convert it to an array of [lat, lng] pairs.
-        const leafletPositions = points.map(([lng, lat]) => [lat, lng]);
-
-        return (
-            <Polyline
-                key={i}
-                positions={leafletPositions}
-                pathOptions={{ color: 'red', weight: 3 }}
+    <div className="MapWrapper">
+        <Weather currentZoom={currentZoom} setActiveWeather={setActiveWeather} activeWeather={activeWeather}/>
+        <div className="EarthquakeDate">
+            <EarthquakeData hull={hull} setHull={setHull}/>
+        </div>
+        <div className="map-container">
+            <MapContainer
+            center={[14.5995, 120.9842]}
+            zoom={6}
+            style={{ height: '75vh', width: '75vw' }}
+            >
+            <MapWatcher setZoom={setZoom}/>
+            <TileLayer
+                url="https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png?key=cb1_402u_1_2b0d51d8f3e9bea980b035cc"
+                attribution="&copy; OpenStreetMap contributors"
             />
-        );
-    })}
-    </MapContainer>
+            {activeWeather && Object.entries(activeWeather as Record<string, Info>).map(([city, info]) => (
+                <Marker
+                    key={city}
+                    position={[info.latitude, info.longitude]}
+                    icon={icon({
+                        city,
+                        weather: info.weather_icon as location["weather"],
+                        temperature: info.temperature,
+                        temperature_icon: info.temperature_unit,
+                    })}
+                >
+                    <Popup>{city}</Popup>
+                </Marker>
+            ))}
+            {Array.from(hull.values()).map((points, i) => {
+                // points is an array of [lng, lat] pairs.
+                // We need to convert it to an array of [lat, lng] pairs.
+                const leafletPositions = points.map(([lng, lat]: Array<number>) => [lat, lng]);
+
+                return (
+                    <Polyline
+                        key={i}
+                        positions={leafletPositions}
+                        pathOptions={{ color: 'red', weight: 3 }}
+                    />
+                );
+            })}
+            </MapContainer>
+        </div>
+    </div>
     </>
   )
 }
