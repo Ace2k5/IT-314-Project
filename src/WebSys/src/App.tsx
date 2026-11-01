@@ -3,6 +3,7 @@ import { ShowDebugPanel } from './components/debug/DebugPanelButton'
 import { ShowMap } from './components/leaflet/MapButton'
 import { ShowChat } from './components/chat/ChatButton'
 import { MMap } from './components/leaflet/Map'
+import { SettingsButton, Settings } from './components/settings/settings'
 import './navbar.css'
 
 function App() {
@@ -25,11 +26,19 @@ function App() {
         <ShowDebugPanel open={open} setOpen={setOpen}/>
       </div>
 
+      <div className="settings-button">
+        <SettingsButton open={open} setOpen={setOpen}/>
+      </div>
+
     </nav>
 
     <div className="map-component">
       {open === "map" && <MMap/>}
     </div>
+    <div className="settings-component">
+      {open === "settings" && <Settings open={open} setOpen={setOpen}/>}
+    </div>
+
     </>
   )
 }
