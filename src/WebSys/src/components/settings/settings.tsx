@@ -26,11 +26,11 @@ export function SettingsButton({open, setOpen}: ShowSettingsProps){
 }
 
 export function Settings({open, setOpen}: ShowSettingsProps) {
-    const [apiDraft, setApiDraft] = useState("")
     const [endpoint, setEndpoint] = useState("")
     const [endpointDraft, setEndpointDraft] = useState("")
 
     const [api, setAPI] = useState("")
+    const [apiDraft, setAPIDraft] = useState("")
     const [model, setModel] = useState("")
 
     const openSettings = () => {
@@ -42,23 +42,36 @@ export function Settings({open, setOpen}: ShowSettingsProps) {
         }
     }
 
+    const callAPI = (e: React.SubmitEvent) => {
+        e.preventDefault()
+        setAPI(apiDraft)
+        setEndpoint(endpointDraft)
+    }
+
     return(
         <>
         <div className="settings-background">
             <div className="settings">
                 <h2>Settings</h2>
-                <div className="modelapi">
-                    <input
-                    id="endpoint"
-                    type="text"
-                    placeholder="Enter OpenAI compatible endpoint"/>
-                    <br/>
+                    <form onSubmit={(e) => callAPI(e)}>
+                        <div className="modelapi">
+                            <p>Endpoint</p>
+                            <input
+                            id="endpoint"
+                            type="text"
+                            placeholder="Enter OpenAI compatible endpoint"
+                            onChange={(e) => setAPIDraft(e.target.value)}/>
+                            <br/>
+                            <p>API Key</p>
+                            <input
+                            id="apikey"
+                            type="password"
+                            placeholder="Input API"
+                            onChange={(e) => setEndpointDraft(e.target.value)}/>
+                        </div>
 
-                    <input
-                    id="apikey"
-                    type="text"
-                    placeholder="Input API"/>
-                </div>
+                        <button type="submit">Connect</button>
+                    </form>
                 <button onClick={openSettings}>
                     <p>Click me!</p>
                 </button>

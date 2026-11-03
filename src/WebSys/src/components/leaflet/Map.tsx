@@ -109,7 +109,9 @@ export function MMap() {
                     <Popup>{city}</Popup>
                 </Marker>
             ))}
-            {Array.from(hull.values()).map((points, i) => {
+            {   // hull is a Map, we only get the values.
+                // inside hull is: intensity(number): points in the map[lat, long]
+            Array.from(hull.values()).map((points, i) => {
                 // points is an array of [lng, lat] pairs.
                 // We need to convert it to an array of [lat, lng] pairs.
                 const leafletPositions = points.map(([lng, lat]: Array<number>) => [lat, lng]);

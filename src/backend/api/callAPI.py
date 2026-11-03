@@ -136,6 +136,9 @@ def process_log(app : FastAPI, stringIO):
             log.info(e)
             raise errors.ProcessingError("Something went wrong with processing the message to log, please check info.log")
         
+def openai_api(app : FastAPI):
+    
+        
         
         
 if "__main__" == __name__:

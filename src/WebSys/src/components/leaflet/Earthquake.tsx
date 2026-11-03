@@ -50,19 +50,19 @@ export function EarthquakeData({hull, setHull}: hull_information){
 
     return(
         <>
-            <input
-            type="date"
-            id="start"
-            value={date}
-            min="2016-0-0"
-            max={new Date().toString()}
-            onChange={ (event) => {
-                const date = event.target.value
-                setDate(date)
-                const [year, month, day] = date.split("-")
-                if (!year || !month || !day) return
-                getEarthquake({year, month, day})
-            }}/>
+        <input
+        type="date"
+        id="start"
+        value={date}
+        min="2016-0-0"
+        max={new Date().toString()}
+        onChange={ (event) => {
+            const date = event.target.value
+            setDate(date)
+            const [year, month, day] = date.split("-")
+            if (!year || !month || !day) return
+            getEarthquake({year, month, day})
+        }}/>
         </>
     )
 
