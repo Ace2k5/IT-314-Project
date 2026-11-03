@@ -10,3 +10,7 @@ class EarthquakeDate(BaseModel):
     year: int
     month: int
     day: int
+    
+class API(BaseModel):
+    api: str
+    key: str

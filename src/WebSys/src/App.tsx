@@ -8,6 +8,7 @@ import './navbar.css'
 
 function App() {
   const [open, setOpen] = useState<string | null>(null)
+  const [openSettings, setOpenSettings] = useState<boolean>(false)
   return (
     <>
     <nav className='navbar'>
@@ -27,7 +28,7 @@ function App() {
       </div>
 
       <div className="settings-button">
-        <SettingsButton open={open} setOpen={setOpen}/>
+        <SettingsButton openSettings={openSettings} setOpenSettings={setOpenSettings}/>
       </div>
 
     </nav>
@@ -36,7 +37,7 @@ function App() {
       {open === "map" && <MMap/>}
     </div>
     <div className="settings-component">
-      {open === "settings" && <Settings open={open} setOpen={setOpen}/>}
+      {openSettings === true && <Settings openSettings={openSettings} setOpenSettings={setOpenSettings}/>}
     </div>
 
     </>

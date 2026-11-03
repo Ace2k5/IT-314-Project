@@ -1,0 +1,42 @@
+.model-api {
+    flex: 1;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.model-api h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.input-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 1px;
+    font-size: 14px;
+}
+
+.connect-btn {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #4f92f0;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    
+}

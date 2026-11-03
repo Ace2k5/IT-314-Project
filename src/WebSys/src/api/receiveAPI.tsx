@@ -1,5 +1,6 @@
 import type { WeatherMap } from "../cache/CacheWeather"
 import type { Dates } from "../cache/CacheEarthquake"
+import type { APIProps } from "../components/settings/apisection"
 
 export const BackendConnection = () => ({
     CheckStatus: async () => {
@@ -66,5 +67,33 @@ export const BackendConnection = () => ({
         }
         return await response.json()
     },
+    SaveModelAPI: async ({api, key}: APIProps) => {
+        const response = await fetch("http://localhost:9999/save-api",{
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"api": api, "key": key})
+        })
+        if (!response.ok){
+            BackendConnection().Log("[Frontend] Failed to save API key.")
+        }
+        return await response.json()
+    },
+    GetModel: async ({api, key}: APIProps) => {
+        const response = await fetch("http://localhost:9999/get-models", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"api": api, "key": key})
+            }
+        )
+        if (!response.ok){
+            BackendConnection().Log("[Frontend] Could not fetch models")
+        }
+        return await response.json()
+    }
+
 
 })

@@ -66,7 +66,7 @@ def check_earthquake_db(database, date: datetime.datetime | None = None):
             })
         return result
         
-    log.info("[Earthquake Backend] No event found for %s, returning None, ensure Frontend handles None.", log_msg)
+    log.info("[Earthquake Backend] No event found for %s, returning None.", log_msg)
     return None
 
 def date_range(date: datetime.datetime) -> list[datetime.datetime]:
@@ -92,7 +92,8 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
             pairs = f"{key}={value}"
             list_query.append(pairs)
         query += "&".join(list_query)
-        log.info(f"[Backend Earthquake] Search completed as the URL Link: {url_search}{query}")
+        
+        log.info("[Backend Earthquake] Search completed as the URL Link: %s", (url_search + query))
         return f"{url_search}{query}"
             
 

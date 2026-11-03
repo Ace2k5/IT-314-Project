@@ -8,6 +8,7 @@ from backend import errors
 import datetime
 import time
 import sqlite3
+import backend.openai_api as api
 
 log = logging.getLogger(__name__)
 last_datetime: float = 0.0
@@ -136,8 +137,28 @@ def process_log(app : FastAPI, stringIO):
             log.info(e)
             raise errors.ProcessingError("Something went wrong with processing the message to log, please check info.log")
         
-def openai_api(app : FastAPI):
+def SaveApi(app : FastAPI, database):
+    @app.post("/save-api")
+    def save_api(message: getMessage.API):
+        pass
     
+def Get_Model(app : FastAPI):
+    @app.post("/get-models")
+    def get_model(message: getMessage.API):
+        clean_api = message.api.rstrip('/')
+        query = clean_api + "/v1/models"
+        response = None
+        try:
+            response = httpx.get(query)
+            if not response.is_success:
+                log.error("[Backend Model Fetch] Failed. Status: %s", response.status_code)
+                return
+            return response.json()
+                
+        except httpx.HTTPError as e:
+            msg = f"{message.api}, Error: {e}"
+            log.error("[Backend Model Fetch] Failed to fetch models from %s", msg, exc_info=True)
+        
         
         
         
@@ -148,7 +169,7 @@ if "__main__" == __name__:
     import logging
     from backend import logger
     from io import StringIO
-    
+
     log = logging.getLogger(__name__)
     logger.setup_log(StringIO())
     app = FastAPI()
