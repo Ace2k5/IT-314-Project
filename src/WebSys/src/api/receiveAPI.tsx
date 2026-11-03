@@ -1,3 +1,6 @@
+import type { WeatherMap } from "../cache/CacheWeather"
+import type { Dates } from "../cache/CacheEarthquake"
+
 export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
@@ -23,12 +26,8 @@ export const BackendConnection = () => ({
         console.log(`OK`)
         return await response.json()
     },
-    GetWeather: async (is_detailed: Boolean) => {
-        const response = await fetch("http://localhost:9999/weather", {
-            method: "POST",
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({is_detailed: is_detailed})
-        })
+    GetWeatherLow: async () => {
+        const response = await fetch("http://localhost:9999/weather/low")
         if (!response){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
@@ -36,10 +35,28 @@ export const BackendConnection = () => ({
             BackendConnection().Log(`[Frontend] OK: Weather`)
             console.log(`[Frontend] OK: Weather`)
         }
-        return await response.json()
+        return await (response.json()) as WeatherMap;
     },
-    GetEarthquake: async () => {
-        const response = await fetch("http://localhost:9999/earthquake")
+    GetWeatherHigh: async () => {
+        const response = await fetch("http://localhost:9999/weather/high")
+        if (!response){
+            BackendConnection().Log("[Frontend] Failed to get weather information.")
+        }
+        else{
+            BackendConnection().Log(`[Frontend] OK: Weather`)
+            console.log(`[Frontend] OK: Weather`)
+        }
+        return await (response.json()) as WeatherMap;
+    },
+    GetEarthquake: async ({year, month, day}: Dates) => {
+        const response = await fetch("http://localhost:9999/earthquake", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"year": year, "month": month, "day": day})
+            }
+        )
         if (!response){
             BackendConnection().Log("[Frontend] Failed to get earthquake information.")
         }
@@ -48,9 +65,6 @@ export const BackendConnection = () => ({
             console.log("OK: Earthquake")
         }
         return await response.json()
-    }
-
-    
-
+    },
 
 })

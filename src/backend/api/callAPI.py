@@ -6,8 +6,13 @@ from backend.geography import locations
 from fastapi import FastAPI
 from backend import errors
 import datetime
+import time
+import sqlite3
 
 log = logging.getLogger(__name__)
+last_datetime: float = 0.0
+weather_location_cache: dict[str, dict[str, str | int]] = dict()
+weather_region_cache: dict[str, dict[str, str | int]] = dict()
 
 def weather_coroutes(app : FastAPI):
     weather_icons = {
@@ -48,15 +53,9 @@ def weather_coroutes(app : FastAPI):
         97: "stormy",
         99: "stormy",
     }
+    threshold = 180
     
-    last_datetime = datetime.datetime.min
-    threshold = datetime.timedelta(
-        minutes=3
-    )
-    weather_location_cache = dict()
-    weather_region_cache = dict()
-    
-    def helper_func(loc: dict[str, dict[str, float]]):
+    def fetch_weather_for_all(loc: dict[str, dict[str, float]]):
         log.info("[Weather] Getting weather...")
         dictionary_of_location = dict()
         for location, position in loc.items():
@@ -70,52 +69,48 @@ def weather_coroutes(app : FastAPI):
                 "temperature": data["current"]["temperature_2m"],
                 "temperature_unit": data["current_units"]["temperature_2m"],
                 "weather": data["current"]["weather_code"],
-                "weather_icon": weather_icons[data["current"]["weather_code"]]
+                "weather_icon": weather_icons[data["current"]["weather_code"]],
             }
         return dictionary_of_location
     
-    @app.post("/weather")
-    def get_weather(WeatherInfo : getMessage.WeatherInfo):
-        
-        nonlocal weather_location_cache
-        nonlocal weather_region_cache
-        nonlocal last_datetime 
-        log.info("[Backend Info] Grabbing weather information...")
-        log.info("[Backend Info] Initializing both caches.")
-        
-        current_datetime = datetime.datetime.now()
-        if (current_datetime - last_datetime) > threshold:
-            log.info("[Cache] Conditional met for time, cache now updating...")
-            dictionary_of_locations = helper_func(locations.LOCATIONS)
-            weather_location_cache = dictionary_of_locations
-            log.info("[Cache] Location cache updated.")
-            dictionary_of_locations = helper_func(locations.REGIONS)
-            weather_region_cache = dictionary_of_locations
-            log.info("[Cache] Region cache updated.")
-            
-            last_datetime = current_datetime
+    @app.get("/weather/high")
+    def get_weather_high():
+        global weather_location_cache
+        if utilAPI.is_stale("weather_high", threshold):
+            log.info("[Cache] Refreshing high-res weather...")
+            weather_location_cache = fetch_weather_for_all(locations.LOCATIONS)
+            utilAPI.mark_refreshed("weather_high")
         else:
-            log.info("[Cache] Threshold not met, returning existing cache.")
-        if WeatherInfo.is_detailed == True:
-            log.info("[Cache] Returning location saved cache.")
-            return weather_location_cache
+            log.info("[Cache] high-res still fresh.")
+        return weather_location_cache
+
+
+    @app.get("/weather/low")
+    def get_weather_low():
+        global weather_region_cache
+        if utilAPI.is_stale("weather_low", threshold):
+            log.info("[Cache] Refreshing low-res weather...")
+            weather_region_cache = fetch_weather_for_all(locations.REGIONS)
+            utilAPI.mark_refreshed("weather_low")
         else:
-            log.info("[Cache] Returning region saved cache.")
-            return weather_region_cache
-        
-def gdacs(app: FastAPI):
-    @app.get("/earthquake")
-    def earthquake():
-        log.info("[Earthquake Information]: Grabbing Earthquake information...")
-        now = datetime.datetime.now()
-        start_of_day = now.replace(month=1,day=1,hour=0, minute=0, second=0, microsecond=0)
-        search = utilAPI.search_params("EQ", start_of_day, now, "red;orange")
-        result = httpx.get(utilAPI.call_gdacs(search_params=search), timeout=10)
+            log.info("[Cache] low-res still fresh.")
+        return weather_region_cache
+    
+def gdacs(app: FastAPI, database):
+    @app.post("/earthquake")
+    def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
+        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
+        year = EarthquakeDate.year
+        month = EarthquakeDate.month
+        day = EarthquakeDate.day
+        log.info("[Earthquake Backend Information] Looking for %s", f"{year}-{month}-{day}")
+        result: list[dict] | None = utilAPI.call_gdacs_earthquake(year, month, day, database)
         if not result:
             log.info("[Earthquake Information]: Could not grab anything.")
-        else:
-            log.info(f"[Earthquake Information]: {result.json()}")
-        return result.json()
+            return {"events": []}
+        log.info(f"[Earthquake Information]: {result}")
+        return result
+        
         
 def check_status(app : FastAPI):
     @app.get("/status")
@@ -141,21 +136,35 @@ def process_log(app : FastAPI, stringIO):
             log.info(e)
             raise errors.ProcessingError("Something went wrong with processing the message to log, please check info.log")
         
+def openai_api(app : FastAPI):
+    
+        
         
         
 if "__main__" == __name__:
-    def helper_func(loc: dict[str, dict[str, float]]):
-        dictionary_of_location = dict()
-        for location, position in loc.items():
-            weather = ""
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore" # type: ignore
-            response = httpx.get(url)
-            data = response.json()
-            dictionary_of_location[location] = {
-                "latitude": position['latitude'],
-                "longitude": position['longitude'],
-                "temperature": data["current"]["temperature_2m"],
-                "temperature_unit": data["current_units"]["temperature_2m"],
-                "weather": data["current"]["weather_code"],
-            }
-        return dictionary_of_location
+    from backend.sql import db
+    from pprint import pprint
+    import asyncio
+    import logging
+    from backend import logger
+    from io import StringIO
+    
+    log = logging.getLogger(__name__)
+    logger.setup_log(StringIO())
+    app = FastAPI()
+    database = db.Database()
+    async def test():
+        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
+        year = 2026
+        month = 6
+        day = 7
+        log.info("[Earthquake Backend Information] Looking for")
+        result = utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
+        if not result:
+            log.info("[Earthquake Information]: Could not grab anything.")
+        else:
+            log.info(f"[Earthquake Information]: {result}")
+        log.info(result)
+        return result
+    result = asyncio.run(test())
+    pprint(result)

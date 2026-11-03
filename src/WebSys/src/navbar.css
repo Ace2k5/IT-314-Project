@@ -1,0 +1,18 @@
+:root {
+    --calm-blue: #4f92f0;
+    --calm-white: #f0f0f0
+}
+
+/* The Nav Bar */
+.navbar {
+    display: flex;
+    justify-content: center; /* Centers the 3 buttons in the middle */
+    align-items: center;     /* Centers them vertically */
+    gap: 30px;               /* Puts space between the buttons */
+    
+    height: 60px;
+    background-color: var(--calm-blue);
+    color: var(--calm-white);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional: adds a nice shadow */
+    margin-bottom: 10px;     /* Space between navbar and the map */
+}

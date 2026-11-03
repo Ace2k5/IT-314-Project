@@ -22,10 +22,7 @@ export function ShowMap({open, setOpen}: ShowMapProps){
 
     return(
     <>
-    <div className="map-component">
-        <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
-        {open === "map" && <MMap/>}
-    </div>
+    <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
     </>
     )
 }
