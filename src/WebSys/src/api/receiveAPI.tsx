@@ -1,6 +1,7 @@
 import type { WeatherMap } from "../cache/CacheWeather"
 import type { Dates } from "../cache/CacheEarthquake"
 import type { APIProps } from "../components/settings/apisection"
+import type { ChatCompletions } from "../components/chat/Chat"
 
 export const BackendConnection = () => ({
     CheckStatus: async () => {
@@ -81,6 +82,7 @@ export const BackendConnection = () => ({
         return await response.json()
     },
     GetModel: async ({api, key}: APIProps) => {
+        console.log(`[Frontend Get Model] Sending ${api} to backend...`)
         const response = await fetch("http://localhost:9999/get-models", {
             method: "POST",
             headers: {
@@ -93,7 +95,21 @@ export const BackendConnection = () => ({
             BackendConnection().Log("[Frontend] Could not fetch models")
         }
         return await response.json()
+    },
+    ChatCompletions: async({api, key, selectedModel, history}: ChatCompletions) => {
+        console.log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
+        const response = await fetch("http://localhost:9999/chat/completions",{
+            method: "POST",
+            headers: {
+                "Content-Type": 'application/json'
+                },
+            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": history})
+            }
+        )
+        if (!response) {
+            BackendConnection().Log("[Frontend Chat Completions] Did not receive payload")
+        }
+        return response
     }
-
 
 })

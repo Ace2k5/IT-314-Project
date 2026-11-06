@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./apisection.css"
 import { BackendConnection } from "../../api/receiveAPI";
+import { useAIProps } from '../../middle-man/aiprovider'
 
 type SettingsProps = {
     activeSection: String,
@@ -30,10 +31,8 @@ export function SettingsAPI(){
 
 
     // input fields
-    const [key, setKey] = useState("")
-
-    const [api, setAPI] = useState("")
-    const [model, setModel] = useState("")
+    const {api, selectedModel, key, setAPI, setSelectedModel, setKey } = useAIProps();
+    const [models, setModels] = useState(new Array())
 
 
     // saved data from SQL
@@ -43,12 +42,15 @@ export function SettingsAPI(){
         e.preventDefault()
 
         const response = await backend.GetModel({api, key})
-        if (!response){
+        if (!response || !Array.isArray(response)){
             return
         }
-        setSavedAPI(response)
+        setModels(response)
+        console.log(models)
     }
-    
+
+    useEffect(() => {console.log(`[Frontend Model API] Selected ${selectedModel}`, [selectedModel])})
+
     return(
         <>       
             <div className="model-api">
@@ -71,8 +73,19 @@ export function SettingsAPI(){
                 </div>
             </div>
             <button className="connect-btn" onClick={callAPI}>Connect</button>
-
-            {savedAPI.length != 0 ? console.log(savedAPI) : null}
+            <div className="model-box">
+                {models.length > 0 ? (
+                    <>
+                        {(models).map((model: any, index: number) => (
+                                    <button 
+                                    key={model.id} 
+                                    className={`model-item ${selectedModel === model.id ? 'active' : ''}`}
+                                    onClick={() => setSelectedModel(model.id)}>
+                                    {model.id}
+                                </button>
+                        ))}
+                    </>) : null}
+            </div>
         </>
     )
 

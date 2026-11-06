@@ -4,6 +4,7 @@ from backend.api import utilAPI
 from backend.request_models import getMessage
 from backend.geography import locations
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from backend import errors
 import datetime
 import time
@@ -153,39 +154,72 @@ def Get_Model(app : FastAPI):
             if not response.is_success:
                 log.error("[Backend Model Fetch] Failed. Status: %s", response.status_code)
                 return
+            if "nano" in query or "nano-gpt" in query:
+                log.info("[Backend Fetching Model] NanoGPT found in string, normalizing data...")
+                data = response.json().get('data', [])
+                if len(data) > 10:
+                    shortened_data = utilAPI.shorten_data_structure(data)
+                    log.info("[Backend Fetching Model] Normalized data, sending: %s", shortened_data)
+                else:
+                    log.info("[Backend Fetching Model] Normalized data, sending: %s", data)
+                return data
+            # POLYSTRATA
+            elif "8080" in query:
+                log.info("[Backend Fetching Model] NanoGPT found in string, normalizing data...")
+                data = response.json().get('data', [])
+                log.info("[Backend Fetching Model] Found model for Polystrata: %s", data[0]['id'])
+                return data
             return response.json()
                 
         except httpx.HTTPError as e:
             msg = f"{message.api}, Error: {e}"
             log.error("[Backend Model Fetch] Failed to fetch models from %s", msg, exc_info=True)
         
-        
+def ChatCompletions(app : FastAPI):
+    @app.post("/chat/completions")
+    async def chat_completions(message : getMessage.ChatCompletions):
+        url = f"{message.api.rstrip("/")}" + "/v1/chat/completions"
+        log.info("[Backend Chat Completions] Received: %s. Modified to: %r", message.api, url)
+        payload = {
+            "model": message.selectedModel,
+            "messages": message.history,
+            "stream": True,
+        }
+        if "8080" in url:
+            headers = {
+                    "Content-Type": "application/json",
+                    }
+        else:
+            headers = {
+                "Authorization": f"Bearer {message.key}",
+                "Content-Type": "application/json",
+            }
+        async def event_generator():
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("POST", url, json=payload, headers=headers) as response:
+                    if response.status_code != 200:
+                        body = await response.aread()
+                        log.error(f"[Backend Chat Completions] Provider error {response.status_code}: {body}")
+                        yield f"data: {json.dumps({'error': body.decode(errors='ignore')})}\n\n"
+                        yield "data: [DONE]\n\n"
+                        return
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        # Pass SSE lines through unchanged (already 'data: ...' prefixed)
+                        yield line + "\n\n"
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
         
         
 if "__main__" == __name__:
-    from backend.sql import db
-    from pprint import pprint
+    from fastapi import FastAPI
+    import httpx
     import asyncio
-    import logging
-    from backend import logger
-    from io import StringIO
-
-    log = logging.getLogger(__name__)
-    logger.setup_log(StringIO())
+    import pprint
+    import json
     app = FastAPI()
-    database = db.Database()
-    async def test():
-        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
-        year = 2026
-        month = 6
-        day = 7
-        log.info("[Earthquake Backend Information] Looking for")
-        result = utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
-        if not result:
-            log.info("[Earthquake Information]: Could not grab anything.")
-        else:
-            log.info(f"[Earthquake Information]: {result}")
-        log.info(result)
-        return result
-    result = asyncio.run(test())
-    pprint(result)
+    Get_Model(app)
+    request = httpx.request("POST", "http://localhost:9999/get-models", json={"api": "https://nano-gpt.com/api", "key": "sk-nano-aa55d085-3c2e-448a-be65-a6b104209770"})
+    request.json()
+    print(request.json())

@@ -3,6 +3,7 @@ import { ShowDebugPanel } from './components/debug/DebugPanelButton'
 import { ShowMap } from './components/leaflet/MapButton'
 import { ShowChat } from './components/chat/ChatButton'
 import { MMap } from './components/leaflet/Map'
+import { Chat } from './components/chat/Chat'
 import { SettingsButton, Settings } from './components/settings/settings'
 import './navbar.css'
 
@@ -38,6 +39,9 @@ function App() {
     </div>
     <div className="settings-component">
       {openSettings === true && <Settings openSettings={openSettings} setOpenSettings={setOpenSettings}/>}
+    </div>
+    <div className="chat-component">
+      {open === "chat" && <Chat/>}
     </div>
 
     </>

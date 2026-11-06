@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import React from "react";
-import { BackendConnection } from "../../api/receiveAPI";
 import "./settings.css"
 import { SettingsAPI, SettingsAPIButton } from "./apisection";
 

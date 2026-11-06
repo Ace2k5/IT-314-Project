@@ -14,3 +14,9 @@ class EarthquakeDate(BaseModel):
 class API(BaseModel):
     api: str
     key: str
+    
+class ChatCompletions(BaseModel):
+    api: str
+    key: str
+    selectedModel: str
+    history: list[dict[str, str]]

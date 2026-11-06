@@ -254,7 +254,19 @@ def is_stale(type_of_event: str, threshold: float) -> bool:
 def mark_refreshed(type_of_event: str) -> None:
     _time_lookup[type_of_event] = time.monotonic()
         
-        
+# shorten very large data structures
+
+def shorten_data_structure(data_structure: list | dict | set | tuple):
+    log.info("[Backend Shortening Data Structure] Shortening data structure...")
+    shortened_to_10 = list()
+    counter = 0
+    if type(data_structure) is list:
+        for value in data_structure:
+            if counter > 10:
+                log.info("[Backend Shortening Data Structured] Data structure now has 10 elements.")
+                return shortened_to_10
+            shortened_to_10.append(value)
+            counter += 1
         
 
 if __name__ == "__main__":

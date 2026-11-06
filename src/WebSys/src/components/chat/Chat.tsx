@@ -1,101 +1,135 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, useEffect } from "react";
+import { useAIProps } from "../../middle-man/aiprovider";
+import { BackendConnection } from "../../api/receiveAPI";
+import './Chat.css'
+
+export type ChatCompletions = {
+    api: string,
+    key: string,
+    selectedModel: string,
+    history: Array<Record<string, string>>
+}
 
 type ChatMessage = {
-    role: 'user' | 'assistant',
-    content: string
-}
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+};
 
-type ChatCompletionResponse = {
-    choices?: { message?: { content?: string | null } }[]
-    error?: { message?: string }
-}
 
-export function Chat() {
-    const [messages, setMessages] = useState<ChatMessage[]>([])
-    const [input, setInput] = useState('')
+export function Chat(){
+    const backend = BackendConnection()
+
+    const {selectedModel, api, key} = useAIProps();
+    const [messageHistory, setMessageHistory] = useState<ChatMessage[]>([])
+    const [message, setMessage] = useState('')
+    const [streamingText, setStreamingText] = useState("")
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-    const conversationRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        conversationRef.current?.scrollTo({ top: conversationRef.current.scrollHeight })
-    }, [messages, loading])
+        console.log(selectedModel, api, key)
+    }, [selectedModel, api, key])
 
-    const sendMessage = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        const content = input.trim()
-        if (!content || loading) return
 
-        const { VITE_OPENAI_BASE_URL, VITE_OPENAI_API_KEY, VITE_OPENAI_MODEL } = import.meta.env
-        if (!VITE_OPENAI_BASE_URL || !VITE_OPENAI_API_KEY || !VITE_OPENAI_MODEL) {
-            setError('Chat is not configured. Set VITE_OPENAI_BASE_URL, VITE_OPENAI_API_KEY, and VITE_OPENAI_MODEL.')
+    const chatCompletions = async () => {
+        if (loading === true) {
+            console.log("[Frontend Chat Completions] Request already sent.")
             return
         }
-
-        const history = [...messages, { role: 'user' as const, content }]
-        setMessages(history)
-        setInput('')
-        setError('')
         setLoading(true)
+        setMessage("")
+        const query = message
+        const history = [{ role: "user", content: query }];
+        if (!api || !selectedModel) return;
 
-        try {
-            const baseUrl = VITE_OPENAI_BASE_URL.replace(/\/+$/, '')
-            const response = await fetch(`${baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${VITE_OPENAI_API_KEY}`,
-                },
-                body: JSON.stringify({ model: VITE_OPENAI_MODEL, messages: history }),
-            })
-            const result = await response.json() as ChatCompletionResponse
+        const res = await fetch("http://localhost:9999/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api, key, selectedModel, history }),
+        });
 
-            if (!response.ok) {
-                throw new Error(result.error?.message || `Request failed (${response.status}).`)
-            }
-
-            const reply = result.choices?.[0]?.message?.content
-            if (!reply) throw new Error('The chat endpoint returned no assistant message.')
-
-            setMessages([...history, { role: 'assistant', content: reply }])
-        } catch (caughtError) {
-            setError(caughtError instanceof Error ? caughtError.message : 'Unable to send the message.')
-        } finally {
-            setLoading(false)
+        if (!res.ok || !res.body) {
+            console.error("No stream body", res.status);
+            return;
         }
-    }
 
-    return (
-        <section className="chat-panel" aria-label="Chat">
-            <header className="chat-header">
-                <h2>Chat</h2>
-                <span>{import.meta.env.VITE_OPENAI_MODEL || 'Chat Bot'}</span>
-            </header>
-            <div className="chat-messages" ref={conversationRef} role="log" aria-live="polite">
-                {messages.length === 0 && <p className="chat-empty">Start a conversation.</p>}
-                {messages.map((message, index) => (
-                    <div className={`chat-message chat-message-${message.role}`} key={`${index}-${message.role}`}>
-                        <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
-                        <p>{message.content}</p>
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let assistantText = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE frames are separated by \n\n
+            const frames = buffer.split("\n\n");
+            buffer = frames.pop() ?? ""; // keep incomplete tail
+
+            for (const frame of frames) {
+            const line = frame.trim();
+            if (!line.startsWith("data:")) continue;
+            const data = line.slice(5).trim();
+            if (data === "[DONE]") continue;
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.error) {
+                console.error("Provider error:", parsed.error);
+                continue;
+                }
+                const token = parsed.choices?.[0]?.delta?.content ?? "";
+                if (token) {
+                assistantText += token;
+                setStreamingText(assistantText)
+                }
+            } catch (e) {
+                // ignore partial JSON — should not happen if buffering is correct
+                }
+            }
+        }
+
+        setMessageHistory(prev => [
+            ...prev,
+            { role: "user", content: query },
+            { role: "assistant", content: assistantText },
+        ]);
+        setLoading(false)
+        setStreamingText("")
+        };
+
+    return(
+        <>
+        <div className="chat-box">
+            <div className="display-messages">
+                {messageHistory.length > 0 ? (messageHistory.map((msg, index) => (
+                    <div key={index}>
+                        {msg.role}: {msg.content}
                     </div>
-                ))}
-                {loading && <p className="chat-loading" role="status">Thinking...</p>}
+                ))
+            ) : null }
+            {streamingText && (
+        <div>
+            assistant: {streamingText} (typing...)
+        </div>
+            )}
+                
             </div>
-            {error && <p className="chat-error" role="alert">{error}</p>}
-            <form className="chat-form" onSubmit={sendMessage}>
-                <label className="chat-input-label" htmlFor="chat-message">Message</label>
-                <textarea
-                    id="chat-message"
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    placeholder="Write a message..."
-                    rows={2}
-                    disabled={loading}
+            <div className="input-field">
+                <input 
+                type="text"
+                disabled={loading}
+                value={message}
+                onChange={(e) => {setMessage(e.target.value)}}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        chatCompletions()
+                    }
+                }}
                 />
-                <button type="submit" disabled={loading || !input.trim()}>
-                    {loading ? 'Sending...' : 'Send'}
-                </button>
-            </form>
-        </section>
+                <button onClick={chatCompletions}>Click Me</button>
+            </div>
+        </div>
+        
+        </>
     )
 }
