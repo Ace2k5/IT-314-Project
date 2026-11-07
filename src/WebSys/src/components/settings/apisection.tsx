@@ -31,7 +31,7 @@ export function SettingsAPI(){
 
 
     // input fields
-    const {api, selectedModel, key, setAPI, setSelectedModel, setKey } = useAIProps();
+    const {api, selectedModel, key, mcp, setAPI, setSelectedModel, setKey, setMCP } = useAIProps();
     const [models, setModels] = useState(new Array())
 
 
@@ -70,6 +70,15 @@ export function SettingsAPI(){
                     type="password"
                     placeholder="Input Key (Optional if local host)"
                     onChange={(e) => setKey(e.target.value)}/>
+                </div>
+                <div className="input-group">
+                    <label>MCP Server</label>
+                    <input
+                    id="mcp"
+                    type="text"
+                    placeholder="Input MCP server"
+                    onChange={(e) => setMCP(e.target.value)}
+                    />
                 </div>
             </div>
             <button className="connect-btn" onClick={callAPI}>Connect</button>

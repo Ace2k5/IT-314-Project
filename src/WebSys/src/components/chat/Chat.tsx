@@ -39,13 +39,10 @@ export function Chat(){
         setMessage("")
         const query = message
         const history = [{ role: "user", content: query }];
+        setMessageHistory(prev => [ ...prev, { role: "user", content: query }])
         if (!api || !selectedModel) return;
 
-        const res = await fetch("http://localhost:9999/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ api, key, selectedModel, history }),
-        });
+        const res = await backend.ChatCompletions({api, key, selectedModel, history})
 
         if (!res.ok || !res.body) {
             console.error("No stream body", res.status);
@@ -56,6 +53,9 @@ export function Chat(){
         const decoder = new TextDecoder();
         let buffer = "";
         let assistantText = "";
+        
+        // 1. Create a variable to hold the news payload
+        let pendingNews: any[] | null = null; 
 
         while (true) {
             const { value, done } = await reader.read();
@@ -67,51 +67,61 @@ export function Chat(){
             buffer = frames.pop() ?? ""; // keep incomplete tail
 
             for (const frame of frames) {
-            const line = frame.trim();
-            if (!line.startsWith("data:")) continue;
-            const data = line.slice(5).trim();
-            if (data === "[DONE]") continue;
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.error) {
-                console.error("Provider error:", parsed.error);
-                continue;
-                }
-                const token = parsed.choices?.[0]?.delta?.content ?? "";
-                if (token) {
-                assistantText += token;
-                setStreamingText(assistantText)
-                }
-            } catch (e) {
-                // ignore partial JSON — should not happen if buffering is correct
+                const line = frame.trim();
+                if (!line.startsWith("data:")) continue;
+                const data = line.slice(5).trim();
+                if (data === "[DONE]") continue;
+                
+                try {
+                    const parsed = JSON.parse(data);
+                    
+                    if (parsed.error) {
+                        console.error("Provider error:", parsed.error);
+                        continue;
+                    }
+
+                    // 2. Intercept our custom SSE event
+                    if (parsed.type === "news_data") {
+                        pendingNews = parsed.payload;
+                        continue; // Skip the token logic for this frame
+                    }
+
+                    const token = parsed.choices?.[0]?.delta?.content ?? "";
+                    if (token) {
+                        assistantText += token;
+                        setStreamingText(assistantText)
+                    }
+                } catch (e) {
+                    // ignore partial JSON — should not happen if buffering is correct
                 }
             }
         }
 
+        // 3. Attach the news to the final message object
         setMessageHistory(prev => [
             ...prev,
-            { role: "user", content: query },
-            { role: "assistant", content: assistantText },
+            { role: "assistant", content: assistantText, news: pendingNews || undefined },
         ]);
+        
         setLoading(false)
         setStreamingText("")
-        };
+    };
 
     return(
         <>
         <div className="chat-box">
             <div className="display-messages">
+                <div className="user-message">
                 {messageHistory.length > 0 ? (messageHistory.map((msg, index) => (
                     <div key={index}>
                         {msg.role}: {msg.content}
                     </div>
-                ))
-            ) : null }
-            {streamingText && (
-        <div>
-            assistant: {streamingText} (typing...)
-        </div>
-            )}
+                        ))
+                    ) : null }
+                </div>
+                <div className="assistant-message">
+            {streamingText && (<div> assistant: {streamingText} (typing...)</div>)}
+            </div>
                 
             </div>
             <div className="input-field">

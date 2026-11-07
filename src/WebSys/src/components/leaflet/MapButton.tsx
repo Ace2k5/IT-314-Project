@@ -22,7 +22,7 @@ export function ShowMap({open, setOpen}: ShowMapProps){
 
     return(
     <>
-    <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Show Map</p> }</button>
+    <button onClick={map}>{open === "map" ? <p>Close Map</p> : <p>Map</p> }</button>
     </>
     )
 }

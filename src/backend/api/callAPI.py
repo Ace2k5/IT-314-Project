@@ -1,9 +1,9 @@
 import logging
 import httpx
-from backend.api import utilAPI
+from backend.api import utilAPI, stream_message
 from backend.request_models import getMessage
 from backend.geography import locations
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from backend import errors
 import datetime
@@ -177,15 +177,18 @@ def Get_Model(app : FastAPI):
         
 def ChatCompletions(app : FastAPI):
     @app.post("/chat/completions")
-    async def chat_completions(message : getMessage.ChatCompletions):
+    async def chat_completions(message : getMessage.ChatCompletions, request: Request):
         url = f"{message.api.rstrip("/")}" + "/v1/chat/completions"
         log.info("[Backend Chat Completions] Received: %s. Modified to: %r", message.api, url)
+        openai_tools = request.app.state.openai_tools
+        mcp_client = request.app.state.mcp_client
         payload = {
             "model": message.selectedModel,
             "messages": message.history,
+            "tools": openai_tools,
             "stream": True,
         }
-        if "8080" in url:
+        if not message.key:
             headers = {
                     "Content-Type": "application/json",
                     }
@@ -194,22 +197,8 @@ def ChatCompletions(app : FastAPI):
                 "Authorization": f"Bearer {message.key}",
                 "Content-Type": "application/json",
             }
-        async def event_generator():
-            async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream("POST", url, json=payload, headers=headers) as response:
-                    if response.status_code != 200:
-                        body = await response.aread()
-                        log.error(f"[Backend Chat Completions] Provider error {response.status_code}: {body}")
-                        yield f"data: {json.dumps({'error': body.decode(errors='ignore')})}\n\n"
-                        yield "data: [DONE]\n\n"
-                        return
-                    async for line in response.aiter_lines():
-                        if not line:
-                            continue
-                        # Pass SSE lines through unchanged (already 'data: ...' prefixed)
-                        yield line + "\n\n"
-
-        return StreamingResponse(event_generator(), media_type="text/event-stream")
+        event_generator = stream_message.event_generator
+        return StreamingResponse(event_generator(message, url, payload, headers, mcp_client), media_type="text/event-stream")
         
         
 if "__main__" == __name__:

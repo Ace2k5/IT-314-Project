@@ -1,4 +1,9 @@
 @echo off
+start "Argus Search (WSL)" wsl.exe bash -lic "argus serve --host 0.0.0.0 --port 9997"
+
+cd /d "%~dp0\src\backend\mcp"
+start "MCP Server" cmd /k "uv run fastmcp run mcp.py:mcp --transport http --port 9998"
+
 cd /d "%~dp0\src\backend"
 start "Backend -- Uvicorn" cmd /k "uv run uvicorn main:app --reload --port 9999"
 
