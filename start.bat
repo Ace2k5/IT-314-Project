@@ -1,5 +1,6 @@
 @echo off
-start "Argus Search (WSL)" wsl.exe bash -lic "argus serve --host 0.0.0.0 --port 9997"
+cd /d "%~dp0"
+start "Argus Search" cmd /k "call .venv\Scripts\activate.bat && argus serve --host 0.0.0.0 --port 9997"
 
 cd /d "%~dp0\src\backend\mcp"
 start "MCP Server" cmd /k "uv run fastmcp run mcp.py:mcp --transport http --port 9998"

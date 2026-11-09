@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface AppState {
+interface AIProps {
   api: string;
   selectedModel: string;
   key: string;
@@ -11,7 +11,7 @@ interface AppState {
   setMCP: (key: string) => void;
 }
 
-export const useAIProps = create<AppState>((set) => ({
+export const useAIProps = create<AIProps>((set) => ({
   api: '',
   selectedModel: '',
   key: '',

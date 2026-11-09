@@ -1,7 +1,15 @@
 import type { WeatherMap } from "../cache/CacheWeather"
 import type { Dates } from "../cache/CacheEarthquake"
 import type { APIProps } from "../components/settings/apisection"
-import type { ChatCompletions } from "../components/chat/Chat"
+import type { ChatMessage } from "../services/chatcompletions"
+
+type ChatCompletions = {
+    api: string,
+    key: string,
+    selectedModel: string,
+    messageHistory: ChatMessage[]
+
+}
 
 export const BackendConnection = () => ({
     CheckStatus: async () => {
@@ -96,14 +104,14 @@ export const BackendConnection = () => ({
         }
         return await response.json()
     },
-    ChatCompletions: async({api, key, selectedModel, history}: ChatCompletions) => {
+    ChatCompletions: async({api, key, selectedModel, messageHistory}: ChatCompletions) => {
         console.log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
         const response = await fetch("http://localhost:9999/chat/completions",{
             method: "POST",
             headers: {
                 "Content-Type": 'application/json'
                 },
-            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": history})
+            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": messageHistory})
             }
         )
         if (!response) {
