@@ -19,4 +19,6 @@ class ChatCompletions(BaseModel):
     api: str
     key: str
     selectedModel: str
+    searchKey: str
+    session_id: str
     history: list[dict[str, str]]

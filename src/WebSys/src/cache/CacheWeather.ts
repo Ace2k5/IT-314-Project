@@ -52,6 +52,9 @@ function ensureRegion() {
 }
 
 export async function getWeatherLocation() {
+    if (location_cache === null) {
+        await ensureLocation()
+    }
     if (location_cache && Date.now() - location_fetched_at < timeMs) return location_cache
     await ensureLocation()
     backend.Log("[Weather Frontend Cache] Zoomed out data returned cleanly.")
@@ -59,6 +62,9 @@ export async function getWeatherLocation() {
 }
 
 export async function getWeatherRegion() {
+    if (location_cache === null) {
+        await ensureRegion()
+    }
     if (region_cache && Date.now() - region_fetched_at < timeMs) return region_cache
     await ensureRegion()
     backend.Log("[Weather Frontend Cache] Zoomed in data returned cleanly.")

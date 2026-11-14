@@ -16,7 +16,7 @@ export function Chat(){
     const {loading, message, messageHistory, streamingText, setMessage} = useChatCompletions()
 
     const {selectedModel, api, key} = useAIProps();
-
+    const [sessionId] = useState(() => crypto.randomUUID())
     useEffect(() => {
         console.log(selectedModel, api, key)
     }, [selectedModel, api, key])
@@ -46,11 +46,11 @@ export function Chat(){
                 onChange={(e) => {setMessage(e.target.value)}}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                        chatCompletions()
+                        chatCompletions(sessionId)
                     }
                 }}
                 />
-                <button onClick={chatCompletions}>Click Me</button>
+                <button onClick={() => chatCompletions(sessionId)}>Click Me</button>
             </div>
         </div>
 

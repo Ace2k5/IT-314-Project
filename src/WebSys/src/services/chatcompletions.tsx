@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { useAIProps } from '../middle-man/aiprovider'
 import { BackendConnection } from '../api/receiveAPI'
 import { getNews } from '../components/news/News'
+import { useState } from 'react'
 
 export interface ChatMessage {
     role: "user" | "assistant" | "system",
@@ -33,9 +34,9 @@ export const useChatCompletions = create<ChatCompletions>((set, get) => ({
 }))
 
 
-export const chatCompletions = async () => {
+export const chatCompletions = async (sessionId) => {
     const { loading, message, setLoading, setMessage, appendMessage, setStreamingText } = useChatCompletions.getState();
-    const { api, key, selectedModel } = useAIProps.getState();
+    const { api, key, selectedModel, searchKey } = useAIProps.getState();
     const { setNews } = getNews.getState()
     if (loading === true) {
         console.log("[Frontend Chat Completions] Request already sent.")
@@ -52,7 +53,7 @@ export const chatCompletions = async () => {
         return;
     }
     const messageHistory = useChatCompletions.getState().messageHistory
-    const res = await backend.ChatCompletions({api, key, selectedModel, messageHistory})
+    const res = await backend.ChatCompletions({api, key, selectedModel, messageHistory, searchKey, sessionId})
 
     if (!res.ok || !res.body) {
         console.error("No stream body", res.status);

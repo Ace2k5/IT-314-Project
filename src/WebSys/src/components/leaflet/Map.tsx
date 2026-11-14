@@ -11,6 +11,7 @@ import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
 import L from 'leaflet';
 import './Map.css'
+import { DisasterNews } from '../news/DisasterNews';
 
 type Zoom = {
     currentZoom: number
@@ -127,6 +128,12 @@ export function MMap() {
             </MapContainer>
         </div>
     </div>
+
+    <div className="disaster-news">
+            <DisasterNews/>
+
+    </div>
+
     </>
   )
 }

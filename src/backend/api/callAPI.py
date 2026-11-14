@@ -99,7 +99,7 @@ def weather_coroutes(app : FastAPI):
         return weather_region_cache
     
 def gdacs(app: FastAPI, database):
-    @app.post("/earthquake")
+    @app.post("/weather/earthquake")
     def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
         log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
         year = EarthquakeDate.year
@@ -139,12 +139,12 @@ def process_log(app : FastAPI, stringIO):
             raise errors.ProcessingError("Something went wrong with processing the message to log, please check info.log")
         
 def SaveApi(app : FastAPI, database):
-    @app.post("/save-api")
+    @app.post("/api/save")
     def save_api(message: getMessage.API):
         pass
     
 def Get_Model(app : FastAPI):
-    @app.post("/get-models")
+    @app.post("/models")
     def get_model(message: getMessage.API):
         clean_api = message.api.rstrip('/')
         query = clean_api + "/v1/models"
@@ -177,16 +177,25 @@ def Get_Model(app : FastAPI):
         
 def ChatCompletions(app : FastAPI):
     @app.post("/chat/completions")
-    async def chat_completions(message : getMessage.ChatCompletions, request: Request):
+    async def chat_completions(message : getMessage.ChatCompletions):
         url = f"{message.api.rstrip("/")}" + "/v1/chat/completions"
         log.info("[Backend Chat Completions] Received: %s. Modified to: %r", message.api, url)
-        openai_tools = request.app.state.openai_tools
-        mcp_client = request.app.state.mcp_client
         payload = {
             "model": message.selectedModel,
             "messages": message.history,
-            "tools": openai_tools,
             "stream": True,
+            "tools": [{
+                "type": "function",
+                "function": {
+                    "name": "search_web",
+                    "description": "Search the web for current news and information.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"]
+                    }
+                }
+            }]
         }
         if not message.key:
             headers = {
@@ -198,7 +207,7 @@ def ChatCompletions(app : FastAPI):
                 "Content-Type": "application/json",
             }
         event_generator = stream_message.event_generator
-        return StreamingResponse(event_generator(message, url, payload, headers, mcp_client), media_type="text/event-stream")
+        return StreamingResponse(event_generator(message, url, payload, headers, message.searchKey), media_type="text/event-stream")
         
         
 if "__main__" == __name__:

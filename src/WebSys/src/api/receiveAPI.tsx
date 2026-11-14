@@ -7,8 +7,9 @@ type ChatCompletions = {
     api: string,
     key: string,
     selectedModel: string,
-    messageHistory: ChatMessage[]
-
+    messageHistory: ChatMessage[],
+    searchKey: string,
+    sessionId: string,
 }
 
 export const BackendConnection = () => ({
@@ -59,7 +60,7 @@ export const BackendConnection = () => ({
         return await (response.json()) as WeatherMap;
     },
     GetEarthquake: async ({year, month, day}: Dates) => {
-        const response = await fetch("http://localhost:9999/earthquake", {
+        const response = await fetch("http://localhost:9999/weather/earthquake", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -77,7 +78,7 @@ export const BackendConnection = () => ({
         return await response.json()
     },
     SaveModelAPI: async ({api, key}: APIProps) => {
-        const response = await fetch("http://localhost:9999/save-api",{
+        const response = await fetch("http://localhost:9999/api/save",{
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -91,7 +92,7 @@ export const BackendConnection = () => ({
     },
     GetModel: async ({api, key}: APIProps) => {
         console.log(`[Frontend Get Model] Sending ${api} to backend...`)
-        const response = await fetch("http://localhost:9999/get-models", {
+        const response = await fetch("http://localhost:9999/models", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -104,14 +105,14 @@ export const BackendConnection = () => ({
         }
         return await response.json()
     },
-    ChatCompletions: async({api, key, selectedModel, messageHistory}: ChatCompletions) => {
+    ChatCompletions: async({api, key, selectedModel, messageHistory, searchKey, sessionId}: ChatCompletions) => {
         console.log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
         const response = await fetch("http://localhost:9999/chat/completions",{
             method: "POST",
             headers: {
                 "Content-Type": 'application/json'
                 },
-            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": messageHistory})
+            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": messageHistory, "searchKey": searchKey, "session_id": sessionId})
             }
         )
         if (!response) {

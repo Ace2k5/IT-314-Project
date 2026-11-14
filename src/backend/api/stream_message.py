@@ -2,14 +2,18 @@ import json
 import httpx
 from backend.request_models import getMessage
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
-async def event_generator(message: getMessage.ChatCompletions, url, payload, headers, mcp_client):
-    current_messages = list(message.history) # Copy so we can append to it safely
-    
-    # We might loop twice: once for the tool call, once for the final answer
-    for _ in range(2): 
+
+async def event_generator(message: getMessage.ChatCompletions, url, payload, headers, searchKey):
+    current_messages = list(message.history)
+    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+    if not TAVILY_API_KEY or not TAVILY_API_KEY.startswith("tvly-"):
+        log.error("TAVILY_API_KEY is missing or invalid")
+    # We loop twice: 1st for tool call, 2nd for final answer
+    for _ in range(2):
         payload["messages"] = current_messages
         
         async with httpx.AsyncClient(timeout=None) as client:
@@ -20,7 +24,6 @@ async def event_generator(message: getMessage.ChatCompletions, url, payload, hea
                     yield "data: [DONE]\n\n"
                     return
 
-                # Buffers for tool calls
                 tool_calls_buffer = {}
                 has_tool_calls = False
                 assistant_content = ""
@@ -36,12 +39,12 @@ async def event_generator(message: getMessage.ChatCompletions, url, payload, hea
                         parsed = json.loads(data_str)
                         delta = parsed.get("choices", [{}])[0].get("delta", {})
                         
-                        # 1. Stream text to frontend
+                        # Stream text
                         if "content" in delta and delta["content"]:
                             assistant_content += delta["content"]
-                            yield line + "\n\n" # Pass through to React
+                            yield line + "\n\n" 
 
-                        # 2. Buffer tool calls
+                        # Buffer tool calls
                         if "tool_calls" in delta:
                             has_tool_calls = True
                             for tc in delta["tool_calls"]:
@@ -56,11 +59,8 @@ async def event_generator(message: getMessage.ChatCompletions, url, payload, hea
                     except Exception as e:
                         log.error(f"Parse error: {e}")
 
-                # ---------------------------------------------------------
                 # If the model asked to use a tool, execute it and loop again
-                # ---------------------------------------------------------
                 if has_tool_calls:
-                    # A. Append the assistant's tool request to history
                     current_messages.append({
                         "role": "assistant",
                         "content": assistant_content or None,
@@ -73,39 +73,46 @@ async def event_generator(message: getMessage.ChatCompletions, url, payload, hea
                         ]
                     })
 
-                    # B. Execute each tool via MCP
                     for tc in tool_calls_buffer.values():
                         try:
                             args = json.loads(tc["arguments"])
-                            # Execute via MCP Client
-                            mcp_result = await mcp_client.call_tool(tc["name"], args)
                             
-                            # Format result (FastMCP returns CallToolResult objects)
-                            result_text = mcp_result.content[0].text if mcp_result.content else str(mcp_result)
-                            
-                            
-                            # Argus-Search
-                            # -------------------------------------------
+                            # ---- DIRECT TAVILY CALL ----
                             if tc["name"] == "search_web":
-                                try:
-                                    search_data = json.loads(result_text)
+                                tavily_payload = {
+                                    "query": args.get("query", ""),
+                                    "max_results": 5
+                                }
+                                
+                                tavily_headers = {
+                                        "Authorization": f"Bearer {TAVILY_API_KEY}",
+                                        "Content-Type": "application/json"
+                                    }
+                                
+                                
+                                async with httpx.AsyncClient() as tv_client:
+                                    tv_res = await tv_client.post("https://api.tavily.com/search", json=tavily_payload, headers=tavily_headers)
+                                    tv_data = tv_res.json()
+                                    
+                                    # Format for your React UI
                                     news_payload = [
                                         {
                                             "title": r.get("title", ""),
                                             "url": r.get("url", ""),
-                                            "summary": r.get("snippet", ""),
-                                            "provider": r.get("provider", ""),
+                                            "summary": r.get("content", ""),
+                                            "provider": "tavily"
                                         }
-                                        for r in search_data.get("results", [])[:5]
+                                        for r in tv_data.get("results", [])[:5]
                                     ]
                                     if news_payload:
                                         yield f"data: {json.dumps({'type': 'news_data', 'payload': news_payload})}\n\n"
-                                except json.JSONDecodeError as e:
-                                    log.error(f"Failed to parse search result JSON: {e}")
-                            # -------------------------------------------
-                            
-                            
-                            # Append tool result to history
+                                    
+                                    # The tool result for the LLM
+                                    result_text = json.dumps(tv_data.get("results", []))
+                            else:
+                                result_text = "Tool not recognized."
+
+                            # Append result to history
                             current_messages.append({
                                 "role": "tool",
                                 "tool_call_id": tc["id"],
@@ -119,10 +126,10 @@ async def event_generator(message: getMessage.ChatCompletions, url, payload, hea
                                 "content": f"Error: {e}"
                             })
                     
-                    # Continue the for-loop to make the SECOND call with tool results
+                    # Continue the loop to make the SECOND call with tool results
                     continue 
                 
-                # If no tool calls, we are done. Break the loop.
+                # If no tool calls, we are done.
                 break
 
     yield "data: [DONE]\n\n"

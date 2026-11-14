@@ -31,7 +31,7 @@ export function SettingsAPI(){
 
 
     // input fields
-    const {api, selectedModel, key, mcp, setAPI, setSelectedModel, setKey, setMCP } = useAIProps();
+    const {api, selectedModel, key, searchKey, setAPI, setSelectedModel, setKey, setSearchKey } = useAIProps();
     const [models, setModels] = useState(new Array())
 
 
@@ -48,7 +48,6 @@ export function SettingsAPI(){
         setModels(response)
         console.log(models)
     }
-
     useEffect(() => {console.log(`[Frontend Model API] Selected ${selectedModel}`, [selectedModel])})
 
     return(
@@ -61,7 +60,9 @@ export function SettingsAPI(){
                     id="endpoint"
                     type="text"
                     placeholder="Enter OpenAI compatible API"
-                    onChange={(e) => setAPI(e.target.value)}/>
+                    onChange={(e) => setAPI(e.target.value)}
+                    value={api}
+                    />
                 </div>
                 <div className="input-group">
                     <label>API Key</label>
@@ -72,12 +73,13 @@ export function SettingsAPI(){
                     onChange={(e) => setKey(e.target.value)}/>
                 </div>
                 <div className="input-group">
-                    <label>MCP Server</label>
+                    <label>Search API Key</label>
                     <input
                     id="mcp"
                     type="text"
-                    placeholder="Input MCP server"
-                    onChange={(e) => setMCP(e.target.value)}
+                    placeholder="Input Search Key (Tavily, Brave, etc.)"
+                    onChange={(e) => setSearchKey(e.target.value)}
+                    value={searchKey}
                     />
                 </div>
             </div>
@@ -86,7 +88,7 @@ export function SettingsAPI(){
                 {models.length > 0 ? (
                     <>
                         {(models).map((model: any, index: number) => (
-                                    <button 
+                                    <button
                                     key={model.id} 
                                     className={`model-item ${selectedModel === model.id ? 'active' : ''}`}
                                     onClick={() => setSelectedModel(model.id)}>
