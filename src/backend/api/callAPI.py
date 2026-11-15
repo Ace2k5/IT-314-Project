@@ -123,6 +123,11 @@ def check_status(app : FastAPI):
         return response
     
     
+def evac_centers(app: FastAPI, database):
+    @app.get("/shelters")
+    def get_shelters():
+        return utilAPI.get_shelters(database)
+    
 def process_log(app : FastAPI, stringIO):
     @app.post("/log")
     def log_message(message : getMessage.LogMessage):
@@ -141,6 +146,7 @@ def process_log(app : FastAPI, stringIO):
 def SaveApi(app : FastAPI, database):
     @app.post("/api/save")
     def save_api(message: getMessage.API):
+        # Still deciding on whether or not should we implement a user connection to work on this.
         pass
     
 def Get_Model(app : FastAPI):
@@ -163,11 +169,11 @@ def Get_Model(app : FastAPI):
                 else:
                     log.info("[Backend Fetching Model] Normalized data, sending: %s", data)
                 return data
-            # POLYSTRATA
-            elif "8080" in query:
-                log.info("[Backend Fetching Model] NanoGPT found in string, normalizing data...")
+            # Local Host
+            elif query.startswith("http://"):
+                log.info("[Backend Fetching Model] Locally hosted.")
                 data = response.json().get('data', [])
-                log.info("[Backend Fetching Model] Found model for Polystrata: %s", data[0]['id'])
+                log.info("[Backend Fetching Model] Found model for local host: %s", data[0]['id'])
                 return data
             return response.json()
                 

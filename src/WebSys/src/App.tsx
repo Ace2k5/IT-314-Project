@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ShowDebugPanel } from './components/debug/DebugPanelButton'
+import { ShowDebugPanel, Debug } from './components/debug/DebugPanel'
 import { ShowMap } from './components/leaflet/MapButton'
 import { ShowChat } from './components/chat/ChatButton'
 import { MMap } from './components/leaflet/Map'
@@ -42,6 +42,10 @@ function App() {
     </div>
     <div className="chat-component">
       {open === "chat" && <Chat/>}
+    </div>
+
+    <div className="debug-component">
+      {open === "debug" && <Debug/>}
     </div>
 
     </>

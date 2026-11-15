@@ -77,7 +77,7 @@ export function SettingsAPI(){
                     <input
                     id="mcp"
                     type="text"
-                    placeholder="Input Search Key (Tavily, Brave, etc.)"
+                    placeholder="Input Search Key (Supports only Tavily for now.)"
                     onChange={(e) => setSearchKey(e.target.value)}
                     value={searchKey}
                     />

@@ -107,6 +107,7 @@ export const BackendConnection = () => ({
     },
     ChatCompletions: async({api, key, selectedModel, messageHistory, searchKey, sessionId}: ChatCompletions) => {
         console.log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
+        BackendConnection().Log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
         const response = await fetch("http://localhost:9999/chat/completions",{
             method: "POST",
             headers: {
@@ -119,6 +120,15 @@ export const BackendConnection = () => ({
             BackendConnection().Log("[Frontend Chat Completions] Did not receive payload")
         }
         return response
+    },
+
+    EvacCenter: async() => {
+        const response = await fetch("http://localhost:9999/shelters")
+        if (!response) {
+            BackendConnection().Log("[Frontend Shelters] Did not receive response")
+        }
+        return await response.json()
+   
     }
 
 })

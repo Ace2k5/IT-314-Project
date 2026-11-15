@@ -40,16 +40,25 @@ class Database:
         CREATE TABLE IF NOT EXISTS API (
             api TEXT NOT NULL PRIMARY KEY,
             key TEXT NOT NULL
-            
-        );
+            );
     
         CREATE INDEX IF NOT EXISTS idx_intensity_eventid ON Intensity(eventid);
+        
+        CREATE TABLE IF NOT EXISTS Shelters (
+            id INTEGER PRIMARY KEY,        -- OSM element id
+            name TEXT,
+            lat REAL NOT NULL,
+            lon REAL NOT NULL,
+            type TEXT,
+            address TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_shelters_lat_lon ON shelters(lat, lon);
                             '''
         )
         self.connection.commit()
         
     def check_db(self):
-        self.cursor.execute("SELECT * FROM Earthquake")
+        self.cursor.execute("SELECT * FROM shelters")
         rows = self.cursor.fetchall()
         for row in rows:
             for key in row.keys():

@@ -8,6 +8,7 @@ import json
 import calendar
 from shapely.geometry import MultiPoint
 import time
+from backend.api import shelters
 
 log = logging.getLogger(__name__)
 _time_lookup: dict[str, float] = dict()
@@ -241,7 +242,24 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     result = gdacs_extract(gdacs_info=gdacs_info, database=database)
     database.connection.commit()
     return result
-        
+
+
+def get_shelters(database):
+    database.cursor.execute("SELECT * FROM Shelters")
+    rows = database.cursor.fetchall()
+    if rows is None or len(rows) == 0:
+        log.info("[Backend Shelters] Evacuation centers does not exist")
+        return
+    returned_data = dict()
+    for row in rows:
+        returned_data[row['id']] = {
+            "name": row["name"],
+            "lat": row["lat"],
+            "lon": row["lon"],
+            "type": row["type"],
+            "address": row["address"],
+        }
+    return returned_data
                 
                 
 # time
