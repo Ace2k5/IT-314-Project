@@ -25,24 +25,24 @@ export function Chat(){
         <>
         <div className="chat-box">
             <div className="display-messages">
-                <div className="user-message">
                 {messageHistory.length > 0 ? (messageHistory.map((msg, index) => (
-                    <div key={index}>
+                    <div className={`chat-message chat-message-${msg.role}`} key={index}>
                         {msg.role}: {msg.content}
                     </div>
                         ))
                     ) : null }
-                </div>
-                <div className="assistant-message">
-            {streamingText && (<div> assistant: {streamingText} (typing...)</div>)}
-            </div>
-                
+                {streamingText && (
+                    <div className="chat-message chat-message-assistant">
+                        assistant: {streamingText} (typing...)
+                    </div>
+                )}
             </div>
             <div className="input-field">
                 <input 
                 type="text"
                 disabled={loading}
                 value={message}
+                placeholder="Type here..."
                 onChange={(e) => {setMessage(e.target.value)}}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -50,7 +50,7 @@ export function Chat(){
                     }
                 }}
                 />
-                <button onClick={() => chatCompletions(sessionId)}>Click Me</button>
+                <button onClick={() => chatCompletions(sessionId)}>Send</button>
             </div>
         </div>
 

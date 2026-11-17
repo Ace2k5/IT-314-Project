@@ -27,12 +27,23 @@
     position: absolute;
     top: 10px;
     right: 15px;
-    background: none;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #dfe6f5;
+    border-radius: 50%;
+    background: #ffffff;
     z-index: 9999;  
     font-size: 12px;
     cursor: pointer;
-    color: #333;
+    color: #3d7fe8;
+}
+
+.exit-btn p {
+    margin: 0;
 }
 
 .sidebar {
