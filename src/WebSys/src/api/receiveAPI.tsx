@@ -15,7 +15,7 @@ type ChatCompletions = {
 export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
-        if (!response){
+        if (!response.ok){
             console.log("[Frontend] Was not able to get a response from the backend.")
             return null
         }
@@ -39,7 +39,7 @@ export const BackendConnection = () => ({
     },
     GetWeatherLow: async () => {
         const response = await fetch("http://localhost:9999/weather/low")
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
         else{
@@ -50,7 +50,7 @@ export const BackendConnection = () => ({
     },
     GetWeatherHigh: async () => {
         const response = await fetch("http://localhost:9999/weather/high")
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
         else{
@@ -68,7 +68,7 @@ export const BackendConnection = () => ({
             body: JSON.stringify({"year": year, "month": month, "day": day})
             }
         )
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get earthquake information.")
         }
         else {
@@ -116,7 +116,7 @@ export const BackendConnection = () => ({
             body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": messageHistory, "searchKey": searchKey, "session_id": sessionId})
             }
         )
-        if (!response) {
+        if (!response.ok) {
             BackendConnection().Log("[Frontend Chat Completions] Did not receive payload")
         }
         return response
@@ -124,11 +124,10 @@ export const BackendConnection = () => ({
 
     EvacCenter: async() => {
         const response = await fetch("http://localhost:9999/shelters")
-        if (!response) {
+        if (!response.ok) {
             BackendConnection().Log("[Frontend Shelters] Did not receive response")
         }
-        return await response.json()
-   
+        return await response.json()   
     }
 
 })

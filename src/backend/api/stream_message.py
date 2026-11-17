@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 
 async def event_generator(message: getMessage.ChatCompletions, url, payload, headers, searchKey):
     current_messages = list(message.history)
+    # Supports Tavily only for now.
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
     if not TAVILY_API_KEY or not TAVILY_API_KEY.startswith("tvly-"):
         log.error("TAVILY_API_KEY is missing or invalid")

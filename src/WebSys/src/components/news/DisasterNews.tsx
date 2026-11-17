@@ -1,10 +1,10 @@
 import { chatCompletions,  useChatCompletions } from "../../services/chatcompletions";
-import { getNews } from "./News";
+import { useNewsStore } from "./News";
 import { useState, useEffect, useRef } from "react";
 
 export function DisasterNews(){
     const {setMessage, appendMessage, setMessageHistory} = useChatCompletions()
-    const {news} = getNews()
+    const news = useNewsStore((state) => state.news)
     const [sessionId] = useState(() => crypto.randomUUID())
 
     const hasFetched = useRef(false)

@@ -1,18 +1,25 @@
 import { create } from 'zustand'
 import { useEffect } from 'react';
 
+interface NewsItem {
+    title: string,
+    url: string,
+    summary: string,
+    provider: string,
+}
+
 interface News {
-    news: any[],
+    news: NewsItem[],
     setNews: (news: any[]) => void;
 }
 
-export const getNews = create<News>((set) => ({
+export const useNewsStore = create<News>((set) => ({
     news: [],
     setNews: (newNews: any[]) => set({news: newNews})
 }))
 
 export function ShowNews(){
-    const {news} = getNews()
+    const news = useNewsStore((state) => state.news)
     useEffect( () => {
         console.log(news)
     }, [news])

@@ -32,7 +32,7 @@ export function ShowDebugPanel({open, setOpen}: ShowDebugProps) {
 export function Debug(){
     const [text, setText] = useState("")
     const backend = BackendConnection()
-    const [evac, setEvac] = useState(new Map<String, String | number>)
+    const [evac, setEvac] = useState(new Map<String, String | EvacuationCenter | null | number>)
 
     const checkstatus = async () => {
         const response = await backend.Log("Hello")

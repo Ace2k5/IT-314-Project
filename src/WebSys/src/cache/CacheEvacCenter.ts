@@ -11,7 +11,8 @@ export interface EvacuationCenter {
 const THRESHOLD: number = 180.00 * 1000
 const backend = BackendConnection()
 let evac_promise: boolean | Promise<void> = false
-let evacCache: null | EvacuationCenter = null
+let evacCache: [] | EvacuationCenter[] = []
+let old_date: number = Date.now()
 
 
 async function getEvacCenter() {
@@ -27,6 +28,9 @@ function ensureEvacCache() {
 }
 
 export async function CacheEvacCenter() {
-    await ensureEvacCache()
+    if (evacCache.length === 0 || (Date.now() - old_date) > THRESHOLD){
+        await ensureEvacCache()
+        return evacCache
+    }
     return evacCache
 }
