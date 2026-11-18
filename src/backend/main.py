@@ -1,11 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.api import callAPI
+from backend.api import callAPI, shelters
 from backend import logger
 from backend.sql import db
 from io import StringIO
 import logging
+from fastmcp import Client
+from contextlib import asynccontextmanager
+import socket
+import asyncio
+import logging
 
+log = logging.getLogger(__name__)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -20,8 +26,13 @@ logger.setup_log(stringIO)
 database = db.Database()
 log = logging.getLogger("__name__")
 log.info("[Server started]")
+shelters.check_table(database)
 
 callAPI.weather_coroutes(app)
 callAPI.gdacs(app, database)
 callAPI.check_status(app)
 callAPI.process_log(app, stringIO)
+callAPI.SaveApi(app, database)
+callAPI.Get_Model(app)
+callAPI.evac_centers(app, database)
+callAPI.ChatCompletions(app)

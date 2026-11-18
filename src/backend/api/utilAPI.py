@@ -8,6 +8,7 @@ import json
 import calendar
 from shapely.geometry import MultiPoint
 import time
+from backend.api import shelters
 
 log = logging.getLogger(__name__)
 _time_lookup: dict[str, float] = dict()
@@ -66,7 +67,7 @@ def check_earthquake_db(database, date: datetime.datetime | None = None):
             })
         return result
         
-    log.info("[Earthquake Backend] No event found for %s, returning None, ensure Frontend handles None.", log_msg)
+    log.info("[Earthquake Backend] No event found for %s, returning None.", log_msg)
     return None
 
 def date_range(date: datetime.datetime) -> list[datetime.datetime]:
@@ -92,7 +93,8 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
             pairs = f"{key}={value}"
             list_query.append(pairs)
         query += "&".join(list_query)
-        log.info(f"[Backend Earthquake] Search completed as the URL Link: {url_search}{query}")
+        
+        log.info("[Backend Earthquake] Search completed as the URL Link: %s", (url_search + query))
         return f"{url_search}{query}"
             
 
@@ -240,7 +242,24 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     result = gdacs_extract(gdacs_info=gdacs_info, database=database)
     database.connection.commit()
     return result
-        
+
+
+def get_shelters(database):
+    database.cursor.execute("SELECT * FROM Shelters")
+    rows = database.cursor.fetchall()
+    if rows is None or len(rows) == 0:
+        log.info("[Backend Shelters] Evacuation centers does not exist")
+        return
+    returned_data = dict()
+    for row in rows:
+        returned_data[row['id']] = {
+            "name": row["name"],
+            "lat": row["lat"],
+            "lon": row["lon"],
+            "type": row["type"],
+            "address": row["address"],
+        }
+    return returned_data
                 
                 
 # time
@@ -253,7 +272,19 @@ def is_stale(type_of_event: str, threshold: float) -> bool:
 def mark_refreshed(type_of_event: str) -> None:
     _time_lookup[type_of_event] = time.monotonic()
         
-        
+# shorten very large data structures
+
+def shorten_data_structure(data_structure: list | dict | set | tuple):
+    log.info("[Backend Shortening Data Structure] Shortening data structure...")
+    shortened_to_10 = list()
+    counter = 0
+    if type(data_structure) is list:
+        for value in data_structure:
+            if counter > 10:
+                log.info("[Backend Shortening Data Structured] Data structure now has 10 elements.")
+                return shortened_to_10
+            shortened_to_10.append(value)
+            counter += 1
         
 
 if __name__ == "__main__":

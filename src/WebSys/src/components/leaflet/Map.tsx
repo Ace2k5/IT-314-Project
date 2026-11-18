@@ -9,8 +9,13 @@ import stormyIcon from './map_assets/stormy.png'
 import rainyIcon from './map_assets/rainy.png'
 import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
+import barangayhall from './map_assets/barangayhall.png'
+import sportscenter from './map_assets/sportscenter.png'
+import church from './map_assets/church.png'
+import campus from './map_assets/campus.png'
 import L from 'leaflet';
 import './Map.css'
+import { DisasterNews } from '../news/DisasterNews';
 
 type Zoom = {
     currentZoom: number
@@ -29,14 +34,6 @@ export type hull_information = {
     setHull: React.Dispatch<React.SetStateAction<Map<number, number[][]>>>
 }
 
-const weatherIcons = {
-  "sunny": sunnyIcon,
-  "stormy": stormyIcon,
-  "rainy": rainyIcon,
-  "cloudy": cloudyIcon,
-  "snowy": snowyIcon
-}
-
 type Info = {
     latitude: number,
     longitude: number,
@@ -45,9 +42,15 @@ type Info = {
     temperature_unit: string
 }
 
+const weatherIcons = {
+  "sunny": sunnyIcon,
+  "stormy": stormyIcon,
+  "rainy": rainyIcon,
+  "cloudy": cloudyIcon,
+  "snowy": snowyIcon
+}
 
-
-const icon = ({city, weather, temperature, temperature_icon}: location) => (L.divIcon({
+const weather_icon = ({city, weather, temperature, temperature_icon}: location) => (L.divIcon({
     html: `
         <div>
             <img src=${weatherIcons[weather]} height='50vh' />
@@ -56,6 +59,26 @@ const icon = ({city, weather, temperature, temperature_icon}: location) => (L.di
         </div>
     `
   }))
+
+type shelterLocation = {
+    type: "campus" | "church" | "sportscenter" | "barangayhall",
+    name: String
+}
+
+const shelterIcons = {
+    "campus": campus,
+    "church": church,
+    "sportscenter": sportscenter,
+    "barangayhall": barangayhall
+}
+
+const shelter_icon = ({type, name}: shelterLocation) => (L.divIcon({
+    html: `
+        <div>
+            <img src=${shelterIcons[type]} height='50vh'/>
+            <div>${name}</div>
+    `
+}))
 
 function MapWatcher({setZoom}: { setZoom: React.Dispatch<React.SetStateAction<number>> }) {
     useMapEvents({
@@ -99,7 +122,7 @@ export function MMap() {
                 <Marker
                     key={city}
                     position={[info.latitude, info.longitude]}
-                    icon={icon({
+                    icon={weather_icon({
                         city,
                         weather: info.weather_icon as location["weather"],
                         temperature: info.temperature,
@@ -127,6 +150,12 @@ export function MMap() {
             </MapContainer>
         </div>
     </div>
+
+    <div className="disaster-news">
+            <DisasterNews/>
+
+    </div>
+
     </>
   )
 }

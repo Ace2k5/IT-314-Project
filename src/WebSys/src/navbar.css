@@ -16,3 +16,43 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional: adds a nice shadow */
     margin-bottom: 10px;     /* Space between navbar and the map */
 }
+
+.chat-button,
+.map-button,
+.debug-button,
+.settings-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar > div > button,
+.navbar .map-button button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 160px;
+    height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #ffffff;
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--calm-blue);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar > div > button p,
+.navbar .map-button button p {
+    margin: 0;
+}
+
+.navbar > div > button:hover,
+.navbar .map-button button:hover {
+    background: #f2f6fb;
+    transform: translateY(-1px);
+}

@@ -1,0 +1,59 @@
+.model-api {
+    flex: 1;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.model-api h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.input-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 1px;
+    font-size: 14px;
+}
+
+.connect-btn {
+    margin-top: 10px;
+    min-width: 110px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #4f92f0 0%, #3d7fe8 100%);
+    color: #ffffff;
+    border: 1px solid #3d7fe8;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 18px rgba(79, 146, 240, 0.25);
+}
+
+.connect-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(79, 146, 240, 0.28);
+}
+
+.model-box {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+}

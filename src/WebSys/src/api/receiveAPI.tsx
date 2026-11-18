@@ -1,10 +1,21 @@
 import type { WeatherMap } from "../cache/CacheWeather"
 import type { Dates } from "../cache/CacheEarthquake"
+import type { APIProps } from "../components/settings/apisection"
+import type { ChatMessage } from "../services/chatcompletions"
+
+type ChatCompletions = {
+    api: string,
+    key: string,
+    selectedModel: string,
+    messageHistory: ChatMessage[],
+    searchKey: string,
+    sessionId: string,
+}
 
 export const BackendConnection = () => ({
     CheckStatus: async () => {
         const response = await fetch("http://localhost:9999/status")
-        if (!response){
+        if (!response.ok){
             console.log("[Frontend] Was not able to get a response from the backend.")
             return null
         }
@@ -28,7 +39,7 @@ export const BackendConnection = () => ({
     },
     GetWeatherLow: async () => {
         const response = await fetch("http://localhost:9999/weather/low")
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
         else{
@@ -39,7 +50,7 @@ export const BackendConnection = () => ({
     },
     GetWeatherHigh: async () => {
         const response = await fetch("http://localhost:9999/weather/high")
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get weather information.")
         }
         else{
@@ -49,7 +60,7 @@ export const BackendConnection = () => ({
         return await (response.json()) as WeatherMap;
     },
     GetEarthquake: async ({year, month, day}: Dates) => {
-        const response = await fetch("http://localhost:9999/earthquake", {
+        const response = await fetch("http://localhost:9999/weather/earthquake", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -57,7 +68,7 @@ export const BackendConnection = () => ({
             body: JSON.stringify({"year": year, "month": month, "day": day})
             }
         )
-        if (!response){
+        if (!response.ok){
             BackendConnection().Log("[Frontend] Failed to get earthquake information.")
         }
         else {
@@ -66,5 +77,57 @@ export const BackendConnection = () => ({
         }
         return await response.json()
     },
+    SaveModelAPI: async ({api, key}: APIProps) => {
+        const response = await fetch("http://localhost:9999/api/save",{
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"api": api, "key": key})
+        })
+        if (!response.ok){
+            BackendConnection().Log("[Frontend] Failed to save API key.")
+        }
+        return await response.json()
+    },
+    GetModel: async ({api, key}: APIProps) => {
+        console.log(`[Frontend Get Model] Sending ${api} to backend...`)
+        const response = await fetch("http://localhost:9999/models", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"api": api, "key": key})
+            }
+        )
+        if (!response.ok){
+            BackendConnection().Log("[Frontend] Could not fetch models")
+        }
+        return await response.json()
+    },
+    ChatCompletions: async({api, key, selectedModel, messageHistory, searchKey, sessionId}: ChatCompletions) => {
+        console.log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
+        BackendConnection().Log(`[Frontend Chat Completions] Requesting chat completions for ${selectedModel}.`)
+        const response = await fetch("http://localhost:9999/chat/completions",{
+            method: "POST",
+            headers: {
+                "Content-Type": 'application/json'
+                },
+            body: JSON.stringify({"api": api, "key": key, "selectedModel": selectedModel, "history": messageHistory, "searchKey": searchKey, "session_id": sessionId})
+            }
+        )
+        if (!response.ok) {
+            BackendConnection().Log("[Frontend Chat Completions] Did not receive payload")
+        }
+        return response
+    },
+
+    EvacCenter: async() => {
+        const response = await fetch("http://localhost:9999/shelters")
+        if (!response.ok) {
+            BackendConnection().Log("[Frontend Shelters] Did not receive response")
+        }
+        return await response.json()   
+    }
 
 })

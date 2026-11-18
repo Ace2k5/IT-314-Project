@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { ShowDebugPanel } from './components/debug/DebugPanelButton'
+import { ShowDebugPanel, Debug } from './components/debug/DebugPanel'
 import { ShowMap } from './components/leaflet/MapButton'
 import { ShowChat } from './components/chat/ChatButton'
 import { MMap } from './components/leaflet/Map'
+import { Chat } from './components/chat/Chat'
 import { SettingsButton, Settings } from './components/settings/settings'
 import './navbar.css'
 
 function App() {
   const [open, setOpen] = useState<string | null>(null)
+  const [openSettings, setOpenSettings] = useState<boolean>(false)
   return (
     <>
     <nav className='navbar'>
@@ -27,7 +29,7 @@ function App() {
       </div>
 
       <div className="settings-button">
-        <SettingsButton open={open} setOpen={setOpen}/>
+        <SettingsButton openSettings={openSettings} setOpenSettings={setOpenSettings}/>
       </div>
 
     </nav>
@@ -36,7 +38,14 @@ function App() {
       {open === "map" && <MMap/>}
     </div>
     <div className="settings-component">
-      {open === "settings" && <Settings open={open} setOpen={setOpen}/>}
+      {openSettings === true && <Settings openSettings={openSettings} setOpenSettings={setOpenSettings}/>}
+    </div>
+    <div className="chat-component">
+      {open === "chat" && <Chat/>}
+    </div>
+
+    <div className="debug-component">
+      {open === "debug" && <Debug/>}
     </div>
 
     </>

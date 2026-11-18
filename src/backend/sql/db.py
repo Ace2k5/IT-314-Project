@@ -37,23 +37,35 @@ class Database:
                 ON DELETE CASCADE
             );                 
     
-        CREATE TABLE IF NOT EXISTS User {
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            api_key REAL
-        }
+        CREATE TABLE IF NOT EXISTS API (
+            api TEXT NOT NULL PRIMARY KEY,
+            key TEXT NOT NULL
+            );
     
         CREATE INDEX IF NOT EXISTS idx_intensity_eventid ON Intensity(eventid);
+        
+        CREATE TABLE IF NOT EXISTS Shelters (
+            id INTEGER PRIMARY KEY,        -- OSM element id
+            name TEXT,
+            lat REAL NOT NULL,
+            lon REAL NOT NULL,
+            type TEXT,
+            address TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_shelters_lat_lon ON shelters(lat, lon);
                             '''
         )
         self.connection.commit()
         
-    def test_db(self):
-        self.cursor.execute("SELECT * FROM Earthquake")
+    def check_db(self):
+        self.cursor.execute("SELECT * FROM shelters")
         rows = self.cursor.fetchall()
         for row in rows:
-            print(row[5])
+            for key in row.keys():
+                print(f"{key} : {row[key]}")
         
         
 if "__main__" == __name__:
+    
     sql = Database()
-    sql.test_db()
+    sql.check_db()

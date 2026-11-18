@@ -1,13 +1,15 @@
 import logging
 import httpx
-from backend.api import utilAPI
+from backend.api import utilAPI, stream_message
 from backend.request_models import getMessage
 from backend.geography import locations
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
 from backend import errors
 import datetime
 import time
 import sqlite3
+import backend.openai_api as api
 
 log = logging.getLogger(__name__)
 last_datetime: float = 0.0
@@ -97,7 +99,7 @@ def weather_coroutes(app : FastAPI):
         return weather_region_cache
     
 def gdacs(app: FastAPI, database):
-    @app.post("/earthquake")
+    @app.post("/weather/earthquake")
     def earthquake(EarthquakeDate : getMessage.EarthquakeDate):
         log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
         year = EarthquakeDate.year
@@ -121,6 +123,11 @@ def check_status(app : FastAPI):
         return response
     
     
+def evac_centers(app: FastAPI, database):
+    @app.get("/shelters")
+    def get_shelters():
+        return utilAPI.get_shelters(database)
+    
 def process_log(app : FastAPI, stringIO):
     @app.post("/log")
     def log_message(message : getMessage.LogMessage):
@@ -136,35 +143,87 @@ def process_log(app : FastAPI, stringIO):
             log.info(e)
             raise errors.ProcessingError("Something went wrong with processing the message to log, please check info.log")
         
-def openai_api(app : FastAPI):
+def SaveApi(app : FastAPI, database):
+    @app.post("/api/save")
+    def save_api(message: getMessage.API):
+        # Still deciding on whether or not should we implement a user connection to work on this.
+        pass
     
+def Get_Model(app : FastAPI):
+    @app.post("/models")
+    def get_model(message: getMessage.API):
+        clean_api = message.api.rstrip('/')
+        query = clean_api + "/v1/models"
+        response = None
+        try:
+            response = httpx.get(query)
+            if not response.is_success:
+                log.error("[Backend Model Fetch] Failed. Status: %s", response.status_code)
+                return
+            if "nano" in query or "nano-gpt" in query:
+                log.info("[Backend Fetching Model] NanoGPT found in string, normalizing data...")
+                data = response.json().get('data', [])
+                if len(data) > 10:
+                    shortened_data = utilAPI.shorten_data_structure(data)
+                    log.info("[Backend Fetching Model] Normalized data, sending: %s", shortened_data)
+                else:
+                    log.info("[Backend Fetching Model] Normalized data, sending: %s", data)
+                return data
+            # Local Host
+            elif query.startswith("http://"):
+                log.info("[Backend Fetching Model] Locally hosted.")
+                data = response.json().get('data', [])
+                log.info("[Backend Fetching Model] Found model for local host: %s", data[0]['id'])
+                return data
+            return response.json()
+                
+        except httpx.HTTPError as e:
+            msg = f"{message.api}, Error: {e}"
+            log.error("[Backend Model Fetch] Failed to fetch models from %s", msg, exc_info=True)
         
+def ChatCompletions(app : FastAPI):
+    @app.post("/chat/completions")
+    async def chat_completions(message : getMessage.ChatCompletions):
+        url = f"{message.api.rstrip("/")}" + "/v1/chat/completions"
+        log.info("[Backend Chat Completions] Received: %s. Modified to: %r", message.api, url)
+        payload = {
+            "model": message.selectedModel,
+            "messages": message.history,
+            "stream": True,
+            "tools": [{
+                "type": "function",
+                "function": {
+                    "name": "search_web",
+                    "description": "Search the web for current news and information.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"]
+                    }
+                }
+            }]
+        }
+        if not message.key:
+            headers = {
+                    "Content-Type": "application/json",
+                    }
+        else:
+            headers = {
+                "Authorization": f"Bearer {message.key}",
+                "Content-Type": "application/json",
+            }
+        event_generator = stream_message.event_generator
+        return StreamingResponse(event_generator(message, url, payload, headers, message.searchKey), media_type="text/event-stream")
         
         
 if "__main__" == __name__:
-    from backend.sql import db
-    from pprint import pprint
+    from fastapi import FastAPI
+    import httpx
     import asyncio
-    import logging
-    from backend import logger
-    from io import StringIO
-    
-    log = logging.getLogger(__name__)
-    logger.setup_log(StringIO())
+    import pprint
+    import json
     app = FastAPI()
-    database = db.Database()
-    async def test():
-        log.info("[Earthquake Backend Information] Grabbing Earthquake information...")
-        year = 2026
-        month = 6
-        day = 7
-        log.info("[Earthquake Backend Information] Looking for")
-        result = utilAPI.call_gdacs_earthquake(year=year, month=month, day=day, database=database)
-        if not result:
-            log.info("[Earthquake Information]: Could not grab anything.")
-        else:
-            log.info(f"[Earthquake Information]: {result}")
-        log.info(result)
-        return result
-    result = asyncio.run(test())
-    pprint(result)
+    Get_Model(app)
+    request = httpx.request("POST", "http://localhost:9999/get-models", json={"api": "https://nano-gpt.com/api", "key": "sk-nano-aa55d085-3c2e-448a-be65-a6b104209770"})
+    request.json()
+    print(request.json())

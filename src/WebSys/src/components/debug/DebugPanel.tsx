@@ -1,13 +1,38 @@
 import { useState } from "react";
 import { BackendConnection } from "../../api/receiveAPI";
-import { EarthquakeDebug } from "../leaflet/Earthquake";
-import { Weather } from "../leaflet/Weather";
+import { CacheEvacCenter } from "../../cache/CacheEvacCenter";
+import type { EvacuationCenter } from "../../cache/CacheEvacCenter";
 
+type ShowDebugProps = {
+    open: string | null,
+    setOpen: (value: string | null) => void
+}
 
+export function ShowDebugPanel({open, setOpen}: ShowDebugProps) {
+    const backend = BackendConnection()
 
-export function CheckStatus(){
+    const debug = () => {
+        if (open === "debug"){
+            backend.Log("Closing Debug Panel")
+            setOpen(null)
+        }
+        else {
+            backend.Log("Openign Debug Panel")
+            setOpen("debug")
+        }
+    }
+
+    return(
+        <>
+        <button onClick={debug}>{open === "debug" ? <p>Close Debug Panel</p> : <p>Show Debug Panel</p>}</button>
+        </>
+    )
+}
+
+export function Debug(){
     const [text, setText] = useState("")
     const backend = BackendConnection()
+    const [evac, setEvac] = useState(new Map<String, String | EvacuationCenter | null | number>)
 
     const checkstatus = async () => {
         const response = await backend.Log("Hello")
@@ -15,6 +40,12 @@ export function CheckStatus(){
         if (response){
             setText(response.log_message)
         }
+    }
+
+    const getEvac = async() => {
+        const response = await CacheEvacCenter()
+        setEvac(response)
+        console.log(response)
     }
 
     return(
@@ -25,13 +56,10 @@ export function CheckStatus(){
                 {text && <p>{text}</p>}
             </div>
 
-            <div className="earthquakeStatus">
-                <EarthquakeDebug/>
-
+            <div className="evac-centers">
+                <button onClick={getEvac}> Check Evac Centers </button>
             </div>
         </div>
-
-
         </>
     )
 }
