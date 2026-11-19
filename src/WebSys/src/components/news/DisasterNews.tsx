@@ -1,31 +1,23 @@
-import { chatCompletions,  useChatCompletions } from "../../services/chatcompletions";
-import { useNewsStore } from "./News";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from 'react'
 
-export function DisasterNews(){
-    const {setMessage, appendMessage, setMessageHistory} = useChatCompletions()
-    const news = useNewsStore((state) => state.news)
+import { NEWS_QUERY, sendChatMessage } from '../../services/chatStream'
+import { NewsList } from './News'
+
+/**
+ * Triggers the "latest disasters" search once when the map opens.
+ *
+ * The query is passed to `sendChatMessage` directly rather than written into the
+ * chat draft, so opening the map no longer overwrites what the user is typing.
+ */
+export function DisasterNews() {
     const [sessionId] = useState(() => crypto.randomUUID())
+    const hasRequested = useRef(false)
 
-    const hasFetched = useRef(false)
+    useEffect(() => {
+        if (hasRequested.current) return
+        hasRequested.current = true
+        void sendChatMessage(NEWS_QUERY, sessionId)
+    }, [sessionId])
 
-    useEffect( () => {
-        if (hasFetched.current) return;
-        hasFetched.current = true
-        setMessage("Search up the latest news regarding Typhoons and Earthquakes.")
-        chatCompletions(sessionId)
-        return () => (setMessageHistory([]))
-    }, [])
-    return (
-        <>
-                {news.length > 0 ? news.map((fetched_news, index) => (
-                    <div key={index}>
-                        <label className="news-label">{fetched_news.title}</label> 
-                        <p>{fetched_news.summary}</p>
-                        <a href={fetched_news.url}>{fetched_news.url}</a>
-                    </div>
-                    )) : null }
-        
-        </>
-    )
+    return <NewsList />
 }

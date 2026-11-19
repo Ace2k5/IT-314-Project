@@ -1,63 +1,61 @@
-import { useState, useEffect } from "react";
-import { useAIProps } from "../../middle-man/aiprovider";
-import { BackendConnection } from "../../api/receiveAPI";
+import { useState } from 'react'
+
+import { sendChatMessage } from '../../services/chatStream'
+import { useChatStore } from '../../stores/useChatStore'
+import { NewsList } from '../news/News'
 import './Chat.css'
-import { useChatCompletions, chatCompletions } from "../../services/chatcompletions"
-import { ShowNews } from "../news/News"
 
-type ChatMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-};
+export function Chat() {
+    const draft = useChatStore((state) => state.draft)
+    const history = useChatStore((state) => state.history)
+    const streamingText = useChatStore((state) => state.streamingText)
+    const isLoading = useChatStore((state) => state.isLoading)
+    const error = useChatStore((state) => state.error)
+    const setDraft = useChatStore((state) => state.setDraft)
 
-
-export function Chat(){
-
-    const {loading, message, messageHistory, streamingText, setMessage} = useChatCompletions()
-
-    const {selectedModel, api, key} = useAIProps();
     const [sessionId] = useState(() => crypto.randomUUID())
-    useEffect(() => {
-        console.log(selectedModel, api, key)
-    }, [selectedModel, api, key])
 
-    return(
+    const submit = () => {
+        void sendChatMessage(draft, sessionId, { clearDraft: true })
+    }
+
+    return (
         <>
-        <div className="chat-box">
-            <div className="display-messages">
-                <div className="user-message">
-                {messageHistory.length > 0 ? (messageHistory.map((msg, index) => (
-                    <div key={index}>
-                        {msg.role}: {msg.content}
+            <div className="chat-box">
+                <div className="display-messages">
+                    <div className="user-message">
+                        {history.map((message, index) => (
+                            <div key={`${message.role}-${index}`}>
+                                {message.role}: {message.content}
+                            </div>
+                        ))}
                     </div>
-                        ))
-                    ) : null }
+                    <div className="assistant-message">
+                        {streamingText ? <div>assistant: {streamingText} (typing...)</div> : null}
+                    </div>
+                    {error ? <p className="chat-error">{error}</p> : null}
                 </div>
-                <div className="assistant-message">
-            {streamingText && (<div> assistant: {streamingText} (typing...)</div>)}
-            </div>
-                
-            </div>
-            <div className="input-field">
-                <input 
-                type="text"
-                disabled={loading}
-                value={message}
-                onChange={(e) => {setMessage(e.target.value)}}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        chatCompletions(sessionId)
-                    }
-                }}
-                />
-                <button onClick={() => chatCompletions(sessionId)}>Click Me</button>
-            </div>
-        </div>
 
-        <div className="News">
-            <ShowNews/>
-        </div>
-        
+                <div className="input-field">
+                    <input
+                        type="text"
+                        value={draft}
+                        disabled={isLoading}
+                        placeholder="Ask about disasters, weather or evacuation centres"
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') submit()
+                        }}
+                    />
+                    <button type="button" onClick={submit} disabled={isLoading}>
+                        {isLoading ? 'Sending...' : 'Send'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="News">
+                <NewsList />
+            </div>
         </>
     )
 }
