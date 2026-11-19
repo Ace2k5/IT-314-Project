@@ -1,65 +1,62 @@
-import { useState } from "react";
-import { BackendConnection } from "../../api/receiveAPI";
-import { CacheEvacCenter } from "../../cache/CacheEvacCenter";
-import type { EvacuationCenter } from "../../cache/CacheEvacCenter";
+import { useState } from 'react'
 
-type ShowDebugProps = {
-    open: string | null,
-    setOpen: (value: string | null) => void
-}
+import { backend } from '../../api/backendClient'
+import { getEvacuationCenters } from '../../cache/evacCenterCache'
+import { useUiStore } from '../../stores/useUiStore'
+import type { EvacuationCenters } from '../../types/api'
 
-export function ShowDebugPanel({open, setOpen}: ShowDebugProps) {
-    const backend = BackendConnection()
+export function DebugToggleButton() {
+    const activePanel = useUiStore((state) => state.activePanel)
+    const togglePanel = useUiStore((state) => state.togglePanel)
+    const isOpen = activePanel === 'debug'
 
-    const debug = () => {
-        if (open === "debug"){
-            backend.Log("Closing Debug Panel")
-            setOpen(null)
-        }
-        else {
-            backend.Log("Openign Debug Panel")
-            setOpen("debug")
-        }
+    const toggle = () => {
+        void backend.log(isOpen ? 'Closing the debug panel.' : 'Opening the debug panel.')
+        togglePanel('debug')
     }
 
-    return(
-        <>
-        <button onClick={debug}>{open === "debug" ? <p>Close Debug Panel</p> : <p>Show Debug Panel</p>}</button>
-        </>
+    return (
+        <button type="button" onClick={toggle}>
+            {isOpen ? 'Close Debug Panel' : 'Show Debug Panel'}
+        </button>
     )
 }
 
-export function Debug(){
-    const [text, setText] = useState("")
-    const backend = BackendConnection()
-    const [evac, setEvac] = useState(new Map<String, String | EvacuationCenter | null | number>)
+export function Debug() {
+    const [logs, setLogs] = useState('')
+    const [centers, setCenters] = useState<EvacuationCenters | null>(null)
 
-    const checkstatus = async () => {
-        const response = await backend.Log("Hello")
-        console.log(response)
-        if (response){
-            setText(response.log_message)
-        }
+    const loadLogs = async () => {
+        const response = await backend.log('The debug panel asked for the log.')
+        setLogs(response ? response.logs : 'The backend did not return a log.')
     }
 
-    const getEvac = async() => {
-        const response = await CacheEvacCenter()
-        setEvac(response)
-        console.log(response)
+    const loadCenters = async () => {
+        setCenters((await getEvacuationCenters()) ?? {})
     }
 
-    return(
-        <>
+    const centerCount = centers ? Object.keys(centers).length : 0
+
+    return (
         <div className="debug-component">
             <div className="status">
-                <button onClick={checkstatus}>Call Backend</button>
-                {text && <p>{text}</p>}
+                <button type="button" onClick={loadLogs}>
+                    Call Backend
+                </button>
+                {logs ? <pre>{logs}</pre> : null}
             </div>
 
             <div className="evac-centers">
-                <button onClick={getEvac}> Check Evac Centers </button>
+                <button type="button" onClick={loadCenters}>
+                    Check Evac Centers
+                </button>
+                {centers ? (
+                    <p>
+                        {centerCount} evacuation centre(s) loaded
+                        {centerCount > 0 ? `, first: ${Object.values(centers)[0]?.name ?? ''}` : '.'}
+                    </p>
+                ) : null}
             </div>
         </div>
-        </>
     )
 }

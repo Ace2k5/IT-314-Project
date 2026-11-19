@@ -1,55 +1,31 @@
-import { useState } from 'react'
-import { ShowDebugPanel, Debug } from './components/debug/DebugPanel'
-import { ShowMap } from './components/leaflet/MapButton'
-import { ShowChat } from './components/chat/ChatButton'
-import { MMap } from './components/leaflet/Map'
 import { Chat } from './components/chat/Chat'
-import { SettingsButton, Settings } from './components/settings/settings'
+import { ChatToggleButton } from './components/chat/ChatToggleButton'
+import { Debug, DebugToggleButton } from './components/debug/DebugPanel'
+import { MapToggleButton } from './components/leaflet/MapToggleButton'
+import { MapView } from './components/leaflet/MapView'
+import { Settings, SettingsToggleButton } from './components/settings/Settings'
+import { useUiStore } from './stores/useUiStore'
 import './navbar.css'
 
 function App() {
-  const [open, setOpen] = useState<string | null>(null)
-  const [openSettings, setOpenSettings] = useState<boolean>(false)
-  return (
-    <>
-    <nav className='navbar'>
+    const activePanel = useUiStore((state) => state.activePanel)
+    const isSettingsOpen = useUiStore((state) => state.isSettingsOpen)
 
-      <div className="map">
-        <div className="map-button">
-          <ShowMap open={open} setOpen={setOpen}/>
-        </div>
-      </div>
+    return (
+        <>
+            <nav className="navbar">
+                <MapToggleButton />
+                <ChatToggleButton />
+                <DebugToggleButton />
+                <SettingsToggleButton />
+            </nav>
 
-      <div className="chat-button">
-        <ShowChat open={open} setOpen={setOpen}/>
-      </div>
-
-      <div className="debug-button">
-        <ShowDebugPanel open={open} setOpen={setOpen}/>
-      </div>
-
-      <div className="settings-button">
-        <SettingsButton openSettings={openSettings} setOpenSettings={setOpenSettings}/>
-      </div>
-
-    </nav>
-
-    <div className="map-component">
-      {open === "map" && <MMap/>}
-    </div>
-    <div className="settings-component">
-      {openSettings === true && <Settings openSettings={openSettings} setOpenSettings={setOpenSettings}/>}
-    </div>
-    <div className="chat-component">
-      {open === "chat" && <Chat/>}
-    </div>
-
-    <div className="debug-component">
-      {open === "debug" && <Debug/>}
-    </div>
-
-    </>
-  )
+            {activePanel === 'map' ? <MapView /> : null}
+            {activePanel === 'chat' ? <Chat /> : null}
+            {activePanel === 'debug' ? <Debug /> : null}
+            {isSettingsOpen ? <Settings /> : null}
+        </>
+    )
 }
 
 export default App
