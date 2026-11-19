@@ -1,93 +1,92 @@
-import logging
-import httpx
+"""Evacuation centre ingestion.
+
+The Overpass-based extraction produced ``externals/ph_evacs_cleaned.geojson``;
+this module loads it into the ``Shelters`` table once, the first time the backend
+starts with an empty table.
+"""
+
+from __future__ import annotations
+
 import json
-from pprint import pprint
+import logging
+from pathlib import Path
+from typing import Any
+
+from backend.sql.db import Database
 
 log = logging.getLogger(__name__)
 
+GEOJSON_PATH = Path(__file__).resolve().parents[2] / "externals" / "ph_evacs_cleaned.geojson"
 
-import json
-from pathlib import Path
-GEOJSON_PATH = Path(__file__).parent.parent.parent / "externals" / "ph_evacs_cleaned.geojson"
 
-def check_table(database):
-    database.cursor.execute("SELECT * FROM Shelters")
-    rows = database.cursor.fetchall()
-    if rows is None or len(rows) == 0:
-        log.info("Shelters Table does not exist, creating and populating Shelters table...")
-        ingest(database)
-    else:
-        log.info("Shelters Table already exists.")
-        return
+def _representative_point(geometry: dict[str, Any]) -> tuple[float, float] | None:
+    """Return ``(lon, lat)`` for a Point or Polygon geometry."""
+    coordinates = geometry.get("coordinates")
+    if not coordinates:
+        return None
 
-def ingest(database):
-    database.cursor.executescript("""
-        CREATE TABLE IF NOT EXISTS Shelters (
-            id INTEGER PRIMARY KEY,
-            name TEXT,
-            lat REAL NOT NULL,
-            lon REAL NOT NULL,
-            type TEXT,
-            address TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_shelters_lat_lon ON Shelters(lat, lon);
-    """)
+    geometry_type = geometry.get("type")
+    try:
+        if geometry_type == "Point":
+            return float(coordinates[0]), float(coordinates[1])
+        if geometry_type == "Polygon":
+            lon, lat = coordinates[0][0]
+            return float(lon), float(lat)
+        if geometry_type == "MultiPolygon":
+            lon, lat = coordinates[0][0][0]
+            return float(lon), float(lat)
+    except (IndexError, TypeError, ValueError):
+        return None
+    return None
 
-    with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
 
-    rows = []
+def _build_address(properties: dict[str, Any]) -> str | None:
+    parts = [
+        properties.get("place"),
+        properties.get("city") or properties.get("municipality"),
+        properties.get("province"),
+    ]
+    return ", ".join(part for part in parts if part) or None
+
+
+def ingest(database: Database) -> None:
+    """Read the GeoJSON file and upsert every usable feature into ``Shelters``."""
+    with GEOJSON_PATH.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    rows: list[tuple[Any, ...]] = []
     for feature in data.get("features", []):
-        props = feature.get("properties", {})
-        geom = feature.get("geometry", {})
-
-        # GeoJSON geometry can be Point, Polygon, etc.
-        # For Point: coordinates = [lon, lat]
-        # For Polygon: take the first coordinate of the exterior ring
-        coords = geom.get("coordinates")
-        if not coords:
+        properties = feature.get("properties", {})
+        point = _representative_point(feature.get("geometry", {}))
+        if point is None:
             continue
-
-        if geom.get("type") == "Point":
-            lon, lat = coords[0], coords[1]
-        elif geom.get("type") in ("Polygon", "MultiPolygon"):
-            # Take the first ring's first point as a representative coordinate
-            try:
-                if geom["type"] == "Polygon":
-                    lon, lat = coords[0][0][0], coords[0][0][1]
-                else:  # MultiPolygon
-                    lon, lat = coords[0][0][0][0], coords[0][0][0][1]
-            except (IndexError, TypeError):
-                continue
-        else:
-            continue
-
-        # Build a readable address from the location fields
-        addr_parts = [
-            props.get("place"),
-            props.get("city") or props.get("municipality"),
-            props.get("province"),
-        ]
-        address = ", ".join(p for p in addr_parts if p) or None
+        lon, lat = point
 
         rows.append((
-            props.get("id"),
-            props.get("name") or "Unnamed evacuation center",
-            lat, lon,
-            props.get("type") or "Evacuation Center",
-            address,
+            properties.get("id"),
+            properties.get("name") or "Unnamed evacuation center",
+            lat,
+            lon,
+            properties.get("type") or "Evacuation Center",
+            _build_address(properties),
         ))
 
     database.cursor.executemany("""
-        INSERT INTO shelters (id, name, lat, lon, type, address)
+        INSERT INTO Shelters (id, name, lat, lon, type, address)
         VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name=excluded.name, lat=excluded.lat, lon=excluded.lon,
           type=excluded.type, address=excluded.address
     """, rows)
     database.connection.commit()
-    log.info("Loaded %s shelters into SQL", len(rows))
-    database.connection.close()
-    
-if __name__ == "__main__":
-    print(Path(__file__).parent.parent.parent / "externals" / "ph_evacs_cleaned.geojson")
+    log.info("[Shelters] Loaded %s evacuation centre(s) into SQL.", len(rows))
+
+
+def check_table(database: Database) -> None:
+    """Populate ``Shelters`` when the table is empty, then leave the connection open."""
+    database.cursor.execute("SELECT 1 FROM Shelters LIMIT 1")
+    if database.cursor.fetchone() is None:
+        log.info("[Shelters] Table is empty, ingesting %s ...", GEOJSON_PATH.name)
+        ingest(database)
+    else:
+        log.info("[Shelters] Table already populated.")
