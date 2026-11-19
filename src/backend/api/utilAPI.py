@@ -2,20 +2,19 @@ import datetime
 from typing import Any
 import httpx
 import math
-from pprint import pprint
 import logging
 import json
 import calendar
 from shapely.geometry import MultiPoint
 import time
-from backend.api import shelters
+from backend.sql.db import Database
 
 log = logging.getLogger(__name__)
 _time_lookup: dict[str, float] = dict()
 
 
 
-def call_openmateo(position: dict[str, float]):
+def build_open_meteo_url(position: dict[str, float]) -> str:
     log.info(f"[Backend OpenMateo] Fetching OpenMateo with Latitude: {position['latitude']}, Longitude: {position['longitude']}")
     return f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
 
@@ -56,7 +55,7 @@ def check_earthquake_db(database, date: datetime.datetime | None = None):
                 for row in database.cursor.fetchall()
             ]
             result.append({
-                "eventid":      event["eventid"],
+                "eventid":      int(event["eventid"]),
                 "description":  event["description"],
                 "severity":     event["severity"],
                 "severitytext": event["severitytext"],
@@ -77,12 +76,16 @@ def date_range(date: datetime.datetime) -> list[datetime.datetime]:
     return [month_start, month_end]
 
 
-def call_gdacs_earthquake(year: int, month: int, day: int, database):
+def call_gdacs_earthquake(year: int, month: int, day: int, database: Database):
         
-    def simplify_coordinate(polygon: list[list[float]]) -> list[list[float]]:
-        """Returns a convex hull of 'polygon', or None for a degenerate input."""
-        hull = MultiPoint([tuple(p) for p in polygon]).convex_hull
-        return [list(coord) for coord in hull.exterior.coords] # type: ignore[attr-defined]
+    def simplify_coordinate(polygon: list[list[float]]) -> list[list[float]] | None:
+        """Return the convex hull of ``polygon``, or None for a degenerate input."""
+        if not polygon:
+            return None
+        hull = MultiPoint([tuple(point) for point in polygon]).convex_hull
+        if hull.is_empty or not hasattr(hull, "exterior"):
+            return None
+        return [list(coordinate) for coordinate in hull.exterior.coords]
         
         
     def call_gdacs(search_params: dict[str, str]):
@@ -204,7 +207,6 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
 
             for i in intensities:
                 w, s, e, n = i["bbox"]
-                polygon = i.get("polygon")
                 hull = i.get("hull")
                 database.cursor.execute("""
                     INSERT INTO Intensity
@@ -222,9 +224,6 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
                 "[Earthquake Backend] Normalized %s (%s -- %s)",
                 props["eventid"], events[-1]["initialdate"], events[-1]["enddate"],
             )
-            
-            # DB
-            
 
         return events
     
@@ -244,13 +243,13 @@ def call_gdacs_earthquake(year: int, month: int, day: int, database):
     return result
 
 
-def get_shelters(database):
+def get_shelters(database: Database) -> dict[int, dict[str, Any]] | None:
     database.cursor.execute("SELECT * FROM Shelters")
     rows = database.cursor.fetchall()
-    if rows is None or len(rows) == 0:
+    if not rows:
         log.info("[Backend Shelters] Evacuation centers does not exist")
-        return
-    returned_data = dict()
+        return None
+    returned_data: dict[int, dict[str, Any]] = {}
     for row in rows:
         returned_data[row['id']] = {
             "name": row["name"],
@@ -274,22 +273,16 @@ def mark_refreshed(type_of_event: str) -> None:
         
 # shorten very large data structures
 
-def shorten_data_structure(data_structure: list | dict | set | tuple):
-    log.info("[Backend Shortening Data Structure] Shortening data structure...")
-    shortened_to_10 = list()
-    counter = 0
-    if type(data_structure) is list:
-        for value in data_structure:
-            if counter > 10:
-                log.info("[Backend Shortening Data Structured] Data structure now has 10 elements.")
-                return shortened_to_10
-            shortened_to_10.append(value)
-            counter += 1
-        
+def shorten_data_structure(data_structure: list[Any] | dict[str, Any], limit: int = 10):
+    """Keep only the first ``limit`` entries, so a huge payload stays readable."""
+    if isinstance(data_structure, list):
+        if len(data_structure) > limit:
+            log.info("[Backend Shortening Data Structure] Kept %s of %s entries.", limit, len(data_structure))
+            return data_structure[:limit]
+    return data_structure
+
 
 if __name__ == "__main__":
-    from backend.sql.db import Database
     database = Database()
     call_gdacs_earthquake(2018, 1, 1, database)
-    database.test_db()
-    
+    database.check_db()
