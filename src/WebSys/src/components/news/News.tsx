@@ -1,39 +1,22 @@
-import { create } from 'zustand'
-import { useEffect } from 'react';
+import { useNewsStore } from '../../stores/useNewsStore'
 
-interface NewsItem {
-    title: string,
-    url: string,
-    summary: string,
-    provider: string,
-}
+/** Renders whatever the last search attached to the answer. Renders nothing when empty. */
+export function NewsList() {
+    const items = useNewsStore((state) => state.items)
 
-interface News {
-    news: NewsItem[],
-    setNews: (news: any[]) => void;
-}
+    if (items.length === 0) return null
 
-export const useNewsStore = create<News>((set) => ({
-    news: [],
-    setNews: (newNews: any[]) => set({news: newNews})
-}))
-
-export function ShowNews(){
-    const news = useNewsStore((state) => state.news)
-    useEffect( () => {
-        console.log(news)
-    }, [news])
-
-    return(
-        <>
-        {news.length > 0 ? news.map((fetched_news, index) => (<>
-            <div key={index}>
-            <label>{fetched_news.title}</label>
-            <p>{fetched_news.summary}</p>
-            <a href={fetched_news.url}>{fetched_news.url}</a>
-            </div>
-            </>
-        )) : null }
-        </>
+    return (
+        <ul className="news-list">
+            {items.map((item, index) => (
+                <li key={`${item.url}-${index}`} className="news-item">
+                    <h4 className="news-label">{item.title}</h4>
+                    <p>{item.summary}</p>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                        {item.url}
+                    </a>
+                </li>
+            ))}
+        </ul>
     )
 }
