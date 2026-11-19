@@ -1,116 +1,89 @@
-import { useState, useEffect } from "react";
-import { BackendConnection } from "../../api/receiveAPI";
-import { GetEarthquakeData } from '../../cache/CacheEarthquake';
-import type { Dates } from "../../cache/CacheEarthquake";
-import type { Intensity } from "../../cache/CacheEarthquake";
-import type { hull_information } from "./Map";
+import { useState } from 'react'
 
+import { getEarthquakeEvents } from '../../cache/earthquakeCache'
+import type { Dates, EarthquakeEvent, Hull } from '../../types/api'
+import type { HullState } from './MapView'
 
-export function EarthquakeData({hull, setHull}: hull_information){
-    const [date, setDate] = useState("")
-    const [earthquakeInfo, setEarthquakeInfo] = useState(Array())
-    const getCache = GetEarthquakeData
-    const backend = BackendConnection()
+/** The three intensities the map draws outlines for. */
+const RELEVANT_INTENSITIES: readonly number[] = [4, 6, 8]
 
-    const getEarthquake = async ({year, month, day}: Dates) => {
-        const events = await getCache({year, month, day})
-        if (!Array.isArray(events) || events.length === 0) {
-            backend.Log("[Earthquake Frontend] Cache was empty.")
-            return
-        }
-        setEarthquakeInfo(events)
-        let found_intensities = new Map()
-        for (const event of events) {
-            let intensities: Intensity[] = event.intensities
-            for (const intensities_metadata of intensities) {
-                if (intensities_metadata){
-                    if (intensities_metadata.intensity === 4){
-                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
-                    }
-                    else if (intensities_metadata.intensity === 6){
-                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
-                    }
-                    else if (intensities_metadata.intensity === 8){
-                        found_intensities.set(intensities_metadata.intensity, intensities_metadata.hull)
-                    }
-                }
-            }
-        }
-        if (found_intensities.size > 0){
-        setHull(found_intensities)
-        }
-        else{
-            console.log("Intensity Map is empty.")
-        }
-    }
+const EARLIEST_DATE = '2016-01-01'
 
-    useEffect(()=> {console.log(earthquakeInfo)}, [earthquakeInfo.length > 0])
-    useEffect(() => { console.log(hull) }, [hull])
-
-
-    return(
-        <>
-        <input
-        type="date"
-        id="start"
-        value={date}
-        min="2016-0-0"
-        max={new Date().toString()}
-        onChange={ (event) => {
-            const date = event.target.value
-            setDate(date)
-            const [year, month, day] = date.split("-")
-            if (!year || !month || !day) return
-            getEarthquake({year, month, day})
-        }}/>
-        </>
-    )
-
+function today(): string {
+    return new Date().toISOString().slice(0, 10)
 }
 
+function parseDate(value: string): Dates | null {
+    const [year, month, day] = value.split('-')
+    if (!year || !month || !day) return null
+    return { year, month, day }
+}
 
-export function EarthquakeDebug() {
-    const [date, setDate] = useState("")
-    const backend = BackendConnection()
-
-    const getEarthquake = async ({year, month, day}: Dates) => {
-        const results = await backend.GetEarthquake({year, month, day})
-        if (!Array.isArray(results) || results.length === 0){
-            console.log("BROKEN")
+function collectHulls(events: EarthquakeEvent[]): Map<number, Hull> {
+    const hulls = new Map<number, Hull>()
+    for (const event of events) {
+        for (const intensity of event.intensities ?? []) {
+            if (!RELEVANT_INTENSITIES.includes(intensity.intensity)) continue
+            if (!intensity.hull) continue
+            hulls.set(intensity.intensity, intensity.hull)
         }
+    }
+    return hulls
+}
 
-        for (const result of results){
-            console.log(result)
-        }
+export function EarthquakeDatePicker({ setHull }: HullState) {
+    const [date, setDate] = useState('')
 
-    
+    const onChange = (value: string) => {
+        setDate(value)
+        const dates = parseDate(value)
+        if (!dates) return
+
+        void getEarthquakeEvents(dates).then((events) => {
+            // Always replace the hulls: a day without intensities 4/6/8 must clear
+            // the outlines left over from the previously selected day.
+            setHull(collectHulls(events))
+        })
     }
 
-    return(
-        <>
-        <div className="EarthquakeDate">
-            <label>Start Date</label>
-            <input
+    return (
+        <input
+            id="earthquake-date"
             type="date"
-            id="start"
             value={date}
-            min="2018-01-01"
-            max={new Date().toString()}
-            onChange={(event) => {
-                const date = event.currentTarget.value;
-                if (!date) return;   // empty or not fully entered yet
-
-                const [year, month, day] = date.split("-");
-                if (!year || !month || !day) return;
-                setDate(date)
-                getEarthquake({year, month, day});
-
-            }} />
-
-
-        </div>
-        
-        </>
+            min={EARLIEST_DATE}
+            max={today()}
+            onChange={(event) => onChange(event.target.value)}
+        />
     )
+}
 
+/** Manual inspection of the raw events; handy when the hulls look wrong. */
+export function EarthquakeDebug() {
+    const [date, setDate] = useState('')
+    const [events, setEvents] = useState<EarthquakeEvent[]>([])
+
+    const onChange = async (value: string) => {
+        setDate(value)
+        const dates = parseDate(value)
+        if (!dates) return
+        setEvents(await getEarthquakeEvents(dates))
+    }
+
+    return (
+        <div className="earthquake-debug">
+            <label htmlFor="earthquake-debug-date">Debug: raw events</label>
+            <input
+                id="earthquake-debug-date"
+                type="date"
+                value={date}
+                min={EARLIEST_DATE}
+                max={today()}
+                onChange={(event) => {
+                    void onChange(event.target.value)
+                }}
+            />
+            <pre>{JSON.stringify(events, null, 2)}</pre>
+        </div>
+    )
 }
