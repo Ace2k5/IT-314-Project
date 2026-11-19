@@ -63,30 +63,58 @@ weather_region_cache: dict[str, dict[str, Any]] = {}
 
 
 def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str, Any]]:
-    """Fetch the current weather for every position, skipping the ones that fail."""
-    log.info("[Weather] Refreshing %s location(s)", len(positions))
+    """Fetch every position in a single Open-Meteo call.
+
+    The API answers with an array in request order, tagging each entry with its
+    index in ``location_id`` (the first entry omits it). Map the readings back by
+    that index, never by coordinate: the API snaps coordinates to its grid, so
+    several nearby cities can come back with identical values.
+    """
+    if not positions:
+        return {}
+
+    names = list(positions)
+    url = utilAPI.build_open_meteo_url(list(positions.values()))
+
+    try:
+        response = httpx.get(url, timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        log.error("[Weather] The Open-Meteo call failed: %s", error)
+        return {}
+
+    readings = payload if isinstance(payload, list) else [payload]
     results: dict[str, dict[str, Any]] = {}
 
-    for name, position in positions.items():
-        url = utilAPI.build_open_meteo_url(position)
-        try:
-            response = httpx.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            current = data["current"]
-        except (httpx.HTTPError, ValueError, KeyError) as error:
-            log.error("[Weather] Could not read the weather for %s: %s", name, error)
+    for reading in readings:
+        if not isinstance(reading, dict):
             continue
 
+        index = reading.get("location_id", 0)
+        if not isinstance(index, int) or not 0 <= index < len(names):
+            log.warning("[Weather] Skipped a reading with an unexpected location_id: %r", index)
+            continue
+
+        current = reading.get("current") or {}
+        if "temperature_2m" not in current:
+            log.warning("[Weather] No current reading for %s", names[index])
+            continue
+
+        name = names[index]
+        position = positions[name]
         results[name] = {
+            # Keep the requested coordinates so the marker sits on the city,
+            # not on the grid cell Open-Meteo snapped it to.
             "latitude": position["latitude"],
             "longitude": position["longitude"],
             "temperature": current["temperature_2m"],
-            "temperature_unit": data["current_units"]["temperature_2m"],
+            "temperature_unit": (reading.get("current_units") or {}).get("temperature_2m", "°C"),
             "weather": current["weather_code"],
             "weather_icon": WEATHER_ICONS.get(current["weather_code"], "sunny"),
         }
 
+    log.info("[Weather] Used %s of %s reading(s) from a single call.", len(results), len(names))
     return results
 
 

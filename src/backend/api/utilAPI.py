@@ -14,9 +14,20 @@ _time_lookup: dict[str, float] = dict()
 
 
 
-def build_open_meteo_url(position: dict[str, float]) -> str:
-    log.info(f"[Backend OpenMateo] Fetching OpenMateo with Latitude: {position['latitude']}, Longitude: {position['longitude']}")
-    return f"https://api.open-meteo.com/v1/forecast?latitude={position['latitude']}&longitude={position['longitude']}&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
+def build_open_meteo_url(positions: list[dict[str, float]]) -> str:
+    """One forecast request for every position.
+
+    Open-Meteo accepts comma separated coordinate lists, so the whole city set
+    costs a single round trip instead of one per location.
+    """
+    latitudes = ",".join(str(position["latitude"]) for position in positions)
+    longitudes = ",".join(str(position["longitude"]) for position in positions)
+    log.info("[Backend OpenMeteo] Requesting %s location(s) in one call.", len(positions))
+    return (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={latitudes}&longitude={longitudes}"
+        "&current=temperature_2m,weather_code&timezone=Asia%2FSingapore"
+    )
 
 
 
