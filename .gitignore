@@ -171,3 +171,6 @@ config.json
 
 # Node Modules
 node_modules/
+
+# databsae
+*.db
