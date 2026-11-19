@@ -1,39 +1,40 @@
+"""Logging setup: every record goes to ``info.log`` and to an in-memory buffer.
+
+The buffer is what ``POST /log`` returns to the frontend debug panel.  It grows
+for the lifetime of the process, so it is deliberately capped by the caller.
+"""
+
+from __future__ import annotations
+
 import logging
-from pathlib import Path
 from io import StringIO
 from pathlib import Path
 
-INFO_LOCATION = Path(__file__).parent.parent / "info.log"
+INFO_LOG_PATH = Path(__file__).resolve().parents[1] / "info.log"
 
-def setup_log(stringIO):
-    formatter = logging.Formatter(
-        "DATE: {asctime} | LEVEL: {levelname} | MSG: {message}",
-        style="{",
-        datefmt="%Y - %m - %d - %H:%M"
-    )
-    console_handler = logging.StreamHandler(stringIO)
-    console_handler.setFormatter(formatter)
+LOG_FORMAT = "DATE: {asctime} | LEVEL: {levelname} | MSG: {message}"
+DATE_FORMAT = "%Y-%m-%d %H:%M"
 
-    file_handler = logging.FileHandler(
-        Path(__file__).parent.parent / "info.log",
-        mode="a",
-        encoding="UTF-8"
-    )
+_configured = False
+
+
+def setup_log(log_buffer: StringIO, log_path: Path = INFO_LOG_PATH) -> None:
+    """Attach the buffer and file handlers exactly once per process."""
+    global _configured
+    if _configured:
+        return
+
+    formatter = logging.Formatter(LOG_FORMAT, style="{", datefmt=DATE_FORMAT)
+
+    buffer_handler = logging.StreamHandler(log_buffer)
+    buffer_handler.setFormatter(formatter)
+
+    file_handler = logging.FileHandler(log_path, mode="a", encoding="UTF-8")
     file_handler.setFormatter(formatter)
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(buffer_handler)
+    root.addHandler(file_handler)
 
-if __name__ == "__main__":
-    from io import StringIO
-
-    s = 'This is initial string.'
-    f = StringIO(s) # StringIO object
-
-    f.write(" Welcome to GeeksForGeeks.")
-    f.seek(0)
-    m = f.getvalue()
-    print(m)
+    _configured = True
