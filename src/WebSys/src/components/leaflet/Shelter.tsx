@@ -1,40 +1,15 @@
-import { BackendConnection } from "../../api/receiveAPI";
-import { create } from "zustand";
-import type { EvacuationCenter } from "../../cache/CacheEvacCenter";
-
-interface Location {
-    lat: number,
-    long: number
-}
-
-interface ShelterItems {
-    id: number,
-    name: string,
-    location: Location | null
-    type: string,
-    address: string
-    setId: (id: number) => void,
-    setName: (name: string) => void,
-    setLocation: (location: Location) => void,
-    setType: (type: string) => void,
-    setAddress: (address: string) => void    
-}
-
-const ShelterStore  = create<ShelterItems>((set) => ({
-    id: 0,
-    name: "",
-    location: null,
-    type: "",
-    address: "",
-    setId: (newId) => set({id: newId}),
-    setName: (newName) => set({name: newName}),
-    setLocation: (newLocation) => set({location: newLocation}),
-    setType: (newType) => set({type: newType}),
-    setAddress: (newAddress) => set({address: newAddress})
-}))
-
-
-export function Shelter() {
-    const backend = BackendConnection()
-
+/**
+ * Evacuation-centre markers live here.
+ *
+ * The data is already available: `getEvacuationCenters()` in
+ * `cache/evacCenterCache.ts` returns every row ingested from
+ * `externals/ph_evacs_cleaned.geojson`, and `utils/shelterIcons.ts` builds the
+ * pin for a shelter's type.
+ *
+ * TODO(shelters): render one `<Marker>` per centre with
+ * `createShelterIcon(center.name, center.type)`, and drive the open `<Popup>`
+ * from `useShelterStore`'s `selectedId`.
+ */
+export function ShelterMarkers() {
+    return null
 }
