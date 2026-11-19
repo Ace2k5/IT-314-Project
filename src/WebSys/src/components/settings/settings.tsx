@@ -1,58 +1,48 @@
-import { useEffect, useState } from "react";
-import React from "react";
-import "./settings.css"
-import { SettingsAPI, SettingsAPIButton } from "./apisection";
+import { useState } from 'react'
 
-type ShowSettingsProps = {
-    openSettings: boolean,
-    setOpenSettings: React.Dispatch<React.SetStateAction<boolean>>
-}
+import { useUiStore } from '../../stores/useUiStore'
+import { ApiSection, ApiSectionButton } from './ApiSection'
+import type { SettingsSection } from './ApiSection'
+import './Settings.css'
 
-export function SettingsButton({openSettings, setOpenSettings}: ShowSettingsProps){
-    const open = () => {
-        if (openSettings === true) {
-            setOpenSettings(false)
-        }
-        else {
-            setOpenSettings(true)
-        }
-    }
+export function SettingsToggleButton() {
+    const isSettingsOpen = useUiStore((state) => state.isSettingsOpen)
+    const toggleSettings = useUiStore((state) => state.toggleSettings)
 
-    return(
-    <>
-    <button onClick={open}>{(openSettings === true) ? <p>Close Settings</p> : <p>Open Settings</p>}</button>
-    </>
+    return (
+        <button type="button" onClick={toggleSettings}>
+            {isSettingsOpen ? 'Close Settings' : 'Open Settings'}
+        </button>
     )
 }
 
-export function Settings({openSettings, setOpenSettings}: ShowSettingsProps) {
-    const [activeSection, setActiveSection] = useState("api")
+export function Settings() {
+    const closeSettings = useUiStore((state) => state.closeSettings)
+    const [activeSection, setActiveSection] = useState<SettingsSection>('api')
 
-    const open = () => {
-        if (openSettings === true) {
-            setOpenSettings(false)
-        }
-        else {
-            setOpenSettings(true)
-        }
-    }
-
-    return(
-        <>
+    return (
         <div className="settings-background">
             <div className="settings">
-                <button className="exit-btn" onClick={open}><p>X</p></button>
+                <button
+                    type="button"
+                    className="exit-btn"
+                    onClick={closeSettings}
+                    aria-label="Close settings"
+                >
+                    X
+                </button>
+
                 <div className="sidebar">
-                    <SettingsAPIButton activeSection={activeSection} setActiveSection={setActiveSection}/>
+                    <ApiSectionButton
+                        activeSection={activeSection}
+                        setActiveSection={setActiveSection}
+                    />
                 </div>
 
                 <div className="settings-content">
-                    {activeSection === "api" ? <SettingsAPI/> : null}
+                    {activeSection === 'api' ? <ApiSection /> : null}
                 </div>
-
             </div>
         </div>
-        </>
     )
-
 }

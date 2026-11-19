@@ -1,103 +1,119 @@
-import { useState, useEffect } from "react";
-import "./apisection.css"
-import { BackendConnection } from "../../api/receiveAPI";
-import { useAIProps } from '../../middle-man/aiprovider'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 
-type SettingsProps = {
-    activeSection: String,
-    setActiveSection: React.Dispatch<React.SetStateAction<string>>
+import { backend } from '../../api/backendClient'
+import { useSettingsStore } from '../../stores/useSettingsStore'
+import './ApiSection.css'
+
+export type SettingsSection = 'api'
+
+type SectionButtonProps = {
+    activeSection: SettingsSection
+    setActiveSection: (section: SettingsSection) => void
 }
 
-export type APIProps = {
-    api: String,
-    key: String,
-}
-
-export function SettingsAPIButton({activeSection, setActiveSection}: SettingsProps){
-    const setSection = () => {
-        setActiveSection("api")
-    }
-
-    return(
-        <>
-        <button className="btn-sidebar" onClick={setSection}>API</button>
-        </>
+export function ApiSectionButton({ activeSection, setActiveSection }: SectionButtonProps) {
+    return (
+        <button
+            type="button"
+            className={`btn-sidebar${activeSection === 'api' ? ' active' : ''}`}
+            onClick={() => setActiveSection('api')}
+        >
+            API
+        </button>
     )
 }
 
-export function SettingsAPI(){
+export function ApiSection() {
+    const api = useSettingsStore((state) => state.api)
+    const apiKey = useSettingsStore((state) => state.apiKey)
+    const searchKey = useSettingsStore((state) => state.searchKey)
+    const selectedModel = useSettingsStore((state) => state.selectedModel)
+    const models = useSettingsStore((state) => state.models)
+    const setApi = useSettingsStore((state) => state.setApi)
+    const setApiKey = useSettingsStore((state) => state.setApiKey)
+    const setSearchKey = useSettingsStore((state) => state.setSearchKey)
+    const setSelectedModel = useSettingsStore((state) => state.setSelectedModel)
+    const setModels = useSettingsStore((state) => state.setModels)
 
-    const backend = BackendConnection()
+    const [status, setStatus] = useState('')
+    const [isConnecting, setIsConnecting] = useState(false)
 
+    const connect = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        setIsConnecting(true)
+        setStatus('')
 
-    // input fields
-    const {api, selectedModel, key, searchKey, setAPI, setSelectedModel, setKey, setSearchKey } = useAIProps();
-    const [models, setModels] = useState(new Array())
+        const fetched = await backend.getModels({ api, key: apiKey })
+        setIsConnecting(false)
 
-
-    // saved data from SQL
-    const [savedAPI, setSavedAPI] = useState(new Array())
-
-    const callAPI = async(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        e.preventDefault()
-
-        const response = await backend.GetModel({api, key})
-        if (!response || !Array.isArray(response)){
+        if (!fetched) {
+            setStatus('Could not read the model list. Check the endpoint and the key.')
             return
         }
-        setModels(response)
-        console.log(models)
+        setModels(fetched)
+        setStatus(
+            fetched.length === 0
+                ? 'The endpoint answered but listed no models.'
+                : `Loaded ${fetched.length} model(s).`,
+        )
     }
-    useEffect(() => {console.log(`[Frontend Model API] Selected ${selectedModel}`, [selectedModel])})
 
-    return(
-        <>       
-            <div className="model-api">
-                <h2>API Configuration</h2>
-                <div className="input-group">
-                    <label>Endpoint</label>
-                    <input
+    return (
+        <form className="model-api" onSubmit={connect}>
+            <h2>API Configuration</h2>
+
+            <div className="input-group">
+                <label htmlFor="endpoint">Endpoint</label>
+                <input
                     id="endpoint"
                     type="text"
-                    placeholder="Enter OpenAI compatible API"
-                    onChange={(e) => setAPI(e.target.value)}
+                    placeholder="https://example.com/api"
                     value={api}
-                    />
-                </div>
-                <div className="input-group">
-                    <label>API Key</label>
-                    <input
-                    id="apikey"
-                    type="password"
-                    placeholder="Input Key (Optional if local host)"
-                    onChange={(e) => setKey(e.target.value)}/>
-                </div>
-                <div className="input-group">
-                    <label>Search API Key</label>
-                    <input
-                    id="mcp"
-                    type="text"
-                    placeholder="Input Search Key (Supports only Tavily for now.)"
-                    onChange={(e) => setSearchKey(e.target.value)}
-                    value={searchKey}
-                    />
-                </div>
+                    onChange={(event) => setApi(event.target.value)}
+                />
             </div>
-            <button className="connect-btn" onClick={callAPI}>Connect</button>
-            <div className="model-box">
-                {models.length > 0 ? (
-                    <>
-                        {(models).map((model: any, index: number) => (
-                                    <button
-                                    key={model.id} 
-                                    className={`model-item ${selectedModel === model.id ? 'active' : ''}`}
-                                    onClick={() => setSelectedModel(model.id)}>
-                                    {model.id}
-                                </button>
-                        ))}
-                    </>) : null}
-            </div>
-        </>
-    )
 
+            <div className="input-group">
+                <label htmlFor="api-key">API Key</label>
+                <input
+                    id="api-key"
+                    type="password"
+                    placeholder="Optional for a local endpoint"
+                    value={apiKey}
+                    onChange={(event) => setApiKey(event.target.value)}
+                />
+            </div>
+
+            <div className="input-group">
+                <label htmlFor="search-key">Search API Key</label>
+                <input
+                    id="search-key"
+                    type="text"
+                    placeholder="Leave empty to use TAVILY_API_KEY from the server .env"
+                    value={searchKey}
+                    onChange={(event) => setSearchKey(event.target.value)}
+                />
+            </div>
+
+            <button className="connect-btn" type="submit" disabled={isConnecting}>
+                {isConnecting ? 'Connecting...' : 'Connect'}
+            </button>
+
+            {status ? <p className="connect-status">{status}</p> : null}
+
+            <div className="model-box">
+                {models.map((model) => (
+                    <button
+                        key={model.id}
+                        type="button"
+                        className={`model-item${selectedModel === model.id ? ' active' : ''}`}
+                        onClick={() => setSelectedModel(model.id)}
+                    >
+                        {model.id}
+                    </button>
+                ))}
+            </div>
+        </form>
+    )
 }
