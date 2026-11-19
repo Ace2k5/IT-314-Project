@@ -37,13 +37,6 @@ class ChatRequest(BaseModel):
     session_id: str
     history: list[ChatMessage]
 
-
-class WeatherInfo(BaseModel):
-    """Reserved: per-city weather request, not wired up yet."""
-
-    is_detailed: bool
-
-
 class Shelter(BaseModel):
     """Reserved: shape of a row in the ``Shelters`` table."""
 

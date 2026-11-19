@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 
-import { getCityWeather, getRegionalWeather } from '../../cache/weatherCache'
+import { getCityWeather, pickRegions } from '../../cache/weatherCache'
 import type { WeatherEntry, WeatherKind, WeatherMap } from '../../types/api'
 import { escapeHtml } from '../../utils/escapeHtml'
 import sunnyIcon from './map_assets/sunny.png'
@@ -11,7 +11,7 @@ import rainyIcon from './map_assets/rainy.png'
 import cloudyIcon from './map_assets/cloudy.png'
 import snowyIcon from './map_assets/snowy.png'
 
-/** Above this zoom the map shows one marker per city instead of one region. */
+/** Above this zoom the map shows every city; below it, one marker per region. */
 export const DETAILED_ZOOM = 12
 
 const WEATHER_ICONS: Record<WeatherKind, string> = {
@@ -38,15 +38,14 @@ function createWeatherIcon(city: string, entry: WeatherEntry) {
 /**
  * The weather markers, rendered inside `MapContainer`.
  *
- * This used to be a component that rendered nothing and pushed its data back up
- * to the parent through a callback prop. Reading the zoom from the map itself
- * removes both the prop and the state that used to live in `MapView`.
+ * Reading the zoom from the map itself keeps the state here instead of pushing
+ * it back up to `MapView` through a callback prop.
  */
 export function WeatherLayer() {
     const map = useMap()
     const [zoom, setZoom] = useState(() => map.getZoom())
-    const [cityWeather, setCityWeather] = useState<WeatherMap | null>(null)
-    const [regionalWeather, setRegionalWeather] = useState<WeatherMap | null>(null)
+    // An empty map means "no data yet", so this never needs a null check.
+    const [weather, setWeather] = useState<WeatherMap>({})
 
     useMapEvents({
         zoomend: (event) => setZoom(event.target.getZoom()),
@@ -56,10 +55,9 @@ export function WeatherLayer() {
         let cancelled = false
 
         void (async () => {
-            const [cities, region] = await Promise.all([getCityWeather(), getRegionalWeather()])
+            const cities = await getCityWeather()
             if (cancelled) return
-            setCityWeather(cities)
-            setRegionalWeather(region)
+            setWeather(cities)
         })()
 
         return () => {
@@ -67,12 +65,11 @@ export function WeatherLayer() {
         }
     }, [])
 
-    const weather = zoom >= DETAILED_ZOOM ? cityWeather : regionalWeather
-    if (!weather) return null
+    const visible = zoom >= DETAILED_ZOOM ? weather : pickRegions(weather)
 
     return (
         <>
-            {Object.entries(weather).map(([city, entry]) => (
+            {Object.entries(visible).map(([city, entry]) => (
                 <Marker
                     key={city}
                     position={[entry.latitude, entry.longitude]}

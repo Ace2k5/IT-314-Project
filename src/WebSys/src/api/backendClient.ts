@@ -103,21 +103,10 @@ export const backend = {
     },
 
     /** Detailed weather for each city (shown when zoomed in). */
-    async getCityWeather(): Promise<WeatherMap | null> {
+    async getWeather(): Promise<WeatherMap | null> {
         try {
-            const response = await fetch(`${BACKEND_URL}/weather/high`)
-            return toWeatherMap(await readJson<Record<string, RawWeatherEntry>>(response, 'weather/high'))
-        } catch {
-            console.error('[backend] The weather endpoint is unreachable.')
-            return null
-        }
-    },
-
-    /** A single regional reading (shown when zoomed out). */
-    async getRegionWeather(): Promise<WeatherMap | null> {
-        try {
-            const response = await fetch(`${BACKEND_URL}/weather/low`)
-            return toWeatherMap(await readJson<Record<string, RawWeatherEntry>>(response, 'weather/low'))
+            const response = await fetch(`${BACKEND_URL}/weather`)
+            return toWeatherMap(await readJson<Record<string, RawWeatherEntry>>(response, 'weather'))
         } catch {
             console.error('[backend] The weather endpoint is unreachable.')
             return null

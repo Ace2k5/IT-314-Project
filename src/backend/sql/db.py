@@ -1,7 +1,5 @@
 import sqlite3
 from pathlib import Path
-
-
 class Database:
     def __init__(self):
         self.connection = sqlite3.connect(Path(__file__).parent / "Database.db", check_same_thread=False)

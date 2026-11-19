@@ -58,8 +58,7 @@ WEATHER_ICONS: dict[int, str] = {
     99: "stormy",
 }
 
-weather_city_cache: dict[str, dict[str, Any]] = {}
-weather_region_cache: dict[str, dict[str, Any]] = {}
+weather_cache: dict[str, dict[str, Any]] = {}
 
 
 def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str, Any]]:
@@ -113,7 +112,6 @@ def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str
             "weather": current["weather_code"],
             "weather_icon": WEATHER_ICONS.get(current["weather_code"], "sunny"),
         }
-
     log.info("[Weather] Used %s of %s reading(s) from a single call.", len(results), len(names))
     return results
 
@@ -122,21 +120,11 @@ def register_weather_routes(app: FastAPI) -> None:
     @app.get("/weather/high")
     def get_weather_cities() -> dict[str, dict[str, Any]]:
         """Detailed weather for each city; the map shows this when zoomed in."""
-        global weather_city_cache
+        global weather_cache
         if utilAPI.is_stale("weather_high", WEATHER_CACHE_TTL_SECONDS):
-            weather_city_cache = _fetch_weather(locations.LOCATIONS)
+            weather_cache = _fetch_weather(locations.LOCATIONS)
             utilAPI.mark_refreshed("weather_high")
-        return weather_city_cache
-
-    @app.get("/weather/low")
-    def get_weather_region() -> dict[str, dict[str, Any]]:
-        """A single regional reading; the map shows this when zoomed out."""
-        global weather_region_cache
-        if utilAPI.is_stale("weather_low", WEATHER_CACHE_TTL_SECONDS):
-            weather_region_cache = _fetch_weather(locations.REGIONS)
-            utilAPI.mark_refreshed("weather_low")
-        return weather_region_cache
-
+        return weather_cache
 
 def register_earthquake_routes(app: FastAPI, database: Database) -> None:
     @app.post("/weather/earthquake")
@@ -242,3 +230,13 @@ def register_chat_routes(app: FastAPI) -> None:
             stream_message.event_generator(request, url, payload, headers),
             media_type="text/event-stream",
         )
+
+
+if __name__ == "__main__":
+    from backend import logger
+    from io import StringIO
+    logger.setup_log(StringIO())
+    from backend.geography import locations
+    from pprint import pprint
+    locations = locations.LOCATIONS
+    pprint(_fetch_weather(locations))
