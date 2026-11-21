@@ -56,7 +56,7 @@ export type EvacuationCenter = {
     name: string
     lat: number
     lon: number
-    type: string
+    type: "Barangay Hall" | "Campus" | "Church" | "Sports Center"
     address: string | null
 }
 
