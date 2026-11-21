@@ -90,3 +90,22 @@ def check_table(database: Database) -> None:
         ingest(database)
     else:
         log.info("[Shelters] Table already populated.")
+
+
+def get_shelters(database: Database) -> dict[int, dict[str, Any]] | None:
+    cursor = database.connection.cursor()
+    cursor.execute("SELECT * FROM Shelters")
+    rows = cursor.fetchall()
+    if not rows:
+        log.info("[Backend Shelters] Evacuation centers does not exist")
+        return None
+    returned_data: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        returned_data[row['id']] = {
+            "name": row["name"],
+            "lat": row["lat"],
+            "lon": row["lon"],
+            "type": row["type"],
+            "address": row["address"],
+        }
+    return returned_data
