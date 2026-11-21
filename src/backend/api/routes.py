@@ -14,9 +14,10 @@ from typing import Any
 import httpx
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+import datetime
 
 from backend import errors
-from backend.api import stream_message, utilAPI
+from backend.api import earthquake, stream_message, util, weather, shelters
 from backend.geography import locations
 from backend.request_models import models
 from backend.sql.db import Database
@@ -73,7 +74,7 @@ def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str
         return {}
 
     names = list(positions)
-    url = utilAPI.build_open_meteo_url(list(positions.values()))
+    url = weather.build_open_meteo_url(list(positions.values()))
 
     try:
         response = httpx.get(url, timeout=10)
@@ -117,20 +118,22 @@ def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str
 
 
 def register_weather_routes(app: FastAPI) -> None:
-    @app.get("/weather/high")
+    @app.get("/weather")
     def get_weather_cities() -> dict[str, dict[str, Any]]:
         """Detailed weather for each city; the map shows this when zoomed in."""
         global weather_cache
-        if utilAPI.is_stale("weather_high", WEATHER_CACHE_TTL_SECONDS):
+        if util.is_stale("weather_high", WEATHER_CACHE_TTL_SECONDS):
             weather_cache = _fetch_weather(locations.LOCATIONS)
-            utilAPI.mark_refreshed("weather_high")
+            util.mark_refreshed("weather_high")
         return weather_cache
 
 def register_earthquake_routes(app: FastAPI, database: Database) -> None:
-    @app.post("/weather/earthquake")
-    def get_earthquakes(request: models.EarthquakeDateRequest) -> list[dict[str, Any]]:
-        log.info("[Earthquake] Looking for %s-%s-%s", request.year, request.month, request.day)
-        events = utilAPI.call_gdacs_earthquake(request.year, request.month, request.day, database)
+    @app.get("/weather/earthquake")
+    def get_earthquakes() -> list[dict[str, Any]]:
+        now = datetime.datetime.now()
+        initial_date = now.replace(year=1980, month=1, day=1, hour=0, minute=0, second=0)
+        log.info("[Earthquake] Finding all Earthquakes from %s to %r", initial_date, now)
+        events = earthquake.call_gdacs_earthquake(database)
         if not events:
             log.info("[Earthquake] No events for the requested date.")
             return []
@@ -146,10 +149,10 @@ def register_status_routes(app: FastAPI) -> None:
 def register_shelter_routes(app: FastAPI, database: Database) -> None:
     @app.get("/shelters")
     def get_shelters() -> dict[int, dict[str, Any]] | None:
-        shelters = utilAPI.get_shelters(database)
-        if not shelters:
+        shelter = shelters.get_shelters(database)
+        if not shelter:
             log.info("[Shelters] No evacuation centres are stored yet.")
-        return shelters
+        return shelter
 
 
 def register_log_routes(app: FastAPI, log_buffer: StringIO) -> None:
