@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import { DisasterNews } from '../news/DisasterNews'
 import { EarthquakeDatePicker } from './Earthquake'
 import { WeatherLayer } from './WeatherLayer'
+import { ShelterMarkers } from './Shelter'
 import './MapView.css'
 
 /** Intensity -> hull outline, as `[longitude, latitude]` pairs. */
@@ -43,6 +44,7 @@ export function MapView() {
                             attribution="&copy; OpenStreetMap contributors"
                         />
                         <WeatherLayer />
+                        <ShelterMarkers />
                         {Array.from(hull.entries()).map(([intensity, points]) => (
                             <Polyline
                                 key={intensity}
