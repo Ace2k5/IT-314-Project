@@ -11,7 +11,6 @@
 
 import type {
     ChatMessage,
-    Dates,
     EarthquakeEvent,
     EvacuationCenters,
     LogResponse,
@@ -113,13 +112,9 @@ export const backend = {
         }
     },
 
-    async getEarthquakes({ year, month, day }: Dates): Promise<EarthquakeEvent[] | null> {
+    async getEarthquakes(): Promise<EarthquakeEvent[] | null> {
         try {
-            const response = await fetch(`${BACKEND_URL}/weather/earthquake`, {
-                method: 'POST',
-                headers: JSON_HEADERS,
-                body: JSON.stringify({ year: Number(year), month: Number(month), day: Number(day) }),
-            })
+            const response = await fetch(`${BACKEND_URL}/weather/earthquake`)
             return await readJson<EarthquakeEvent[]>(response, 'weather/earthquake')
         } catch {
             console.error('[backend] The earthquake endpoint is unreachable.')
