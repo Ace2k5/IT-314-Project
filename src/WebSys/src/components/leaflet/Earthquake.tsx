@@ -1,25 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { getEarthquakeEvents } from '../../cache/earthquakeCache'
-import type { Dates, EarthquakeEvent, Hull } from '../../types/api'
+import type { EarthquakeEvent, Hull } from '../../types/api'
 import type { HullState } from './MapView'
 
 /** The three intensities the map draws outlines for. */
 const RELEVANT_INTENSITIES: readonly number[] = [4, 6, 8]
 
-const EARLIEST_DATE = '2016-01-01'
-
-function today(): string {
-    return new Date().toISOString().slice(0, 10)
-}
-
-function parseDate(value: string): Dates | null {
-    const [year, month, day] = value.split('-')
-    if (!year || !month || !day) return null
-    return { year, month, day }
-}
-
 function collectHulls(events: EarthquakeEvent[]): Map<number, Hull> {
+    /* hulls receives a Map of intensity as its key and the Earthquake boundary.
+    * Ex: {"4": [[127..., 16....]], ...} where 4 is the intensity and an array of arrays that contain lat and long
+    */
     const hulls = new Map<number, Hull>()
     for (const event of events) {
         for (const intensity of event.intensities ?? []) {
@@ -31,58 +22,75 @@ function collectHulls(events: EarthquakeEvent[]): Map<number, Hull> {
     return hulls
 }
 
+function eventLabel(event: EarthquakeEvent): string {
+    return `${event.initialdate} — ${event.description.slice(0, 80)}`
+}
+
 export function EarthquakeDatePicker({ setHull }: HullState) {
-    const [date, setDate] = useState('')
+    const [events, setEvents] = useState<EarthquakeEvent[]>([])
+    const [selectedId, setSelectedId] = useState<number | null>(null)
 
-    const onChange = (value: string) => {
-        setDate(value)
-        const dates = parseDate(value)
-        if (!dates) return
-
-        void getEarthquakeEvents(dates).then((events) => {
-            // Always replace the hulls: a day without intensities 4/6/8 must clear
-            // the outlines left over from the previously selected day.
-            setHull(collectHulls(events))
+    useEffect(() => {
+        void getEarthquakeEvents().then((fetched) => {
+            setEvents(fetched)
+            if (fetched.length > 0) {
+                setSelectedId(fetched[0].eventid)
+            }
         })
+    }, [])
+
+    const onChange = (eventId: number | null) => {
+        setSelectedId(eventId)
+        if (eventId === null) {
+            setHull(new Map())
+            return
+        }
+        const event = events.find((e) => e.eventid === eventId)
+        setHull(event ? collectHulls([event]) : new Map())
     }
 
     return (
-        <input
-            id="earthquake-date"
-            type="date"
-            value={date}
-            min={EARLIEST_DATE}
-            max={today()}
-            onChange={(event) => onChange(event.target.value)}
-        />
+        <select
+            id="earthquake-select"
+            value={selectedId ?? ''}
+            onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
+        >
+            {events.length === 0 && <option value="">Loading earthquakes…</option>}
+            {events.map((event) => (
+                <option key={event.eventid} value={event.eventid}>
+                    {eventLabel(event)}
+                </option>
+            ))}
+        </select>
     )
 }
 
 /** Manual inspection of the raw events; handy when the hulls look wrong. */
 export function EarthquakeDebug() {
-    const [date, setDate] = useState('')
     const [events, setEvents] = useState<EarthquakeEvent[]>([])
 
-    const onChange = async (value: string) => {
-        setDate(value)
-        const dates = parseDate(value)
-        if (!dates) return
-        setEvents(await getEarthquakeEvents(dates))
-    }
+    useEffect(() => {
+        void getEarthquakeEvents().then(setEvents)
+    }, [])
 
     return (
         <div className="earthquake-debug">
-            <label htmlFor="earthquake-debug-date">Debug: raw events</label>
-            <input
-                id="earthquake-debug-date"
-                type="date"
-                value={date}
-                min={EARLIEST_DATE}
-                max={today()}
+            <label htmlFor="earthquake-debug-select">Debug: raw events</label>
+            <select
+                id="earthquake-debug-select"
+                value={events.length > 0 ? events[0].eventid : ''}
                 onChange={(event) => {
-                    void onChange(event.target.value)
+                    const chosen = events.find((e) => e.eventid === Number(event.target.value))
+                    setEvents(chosen ? [chosen] : [])
                 }}
-            />
+            >
+                {events.length === 0 && <option value="">Loading…</option>}
+                {events.map((event) => (
+                    <option key={event.eventid} value={event.eventid}>
+                        {eventLabel(event)}
+                    </option>
+                ))}
+            </select>
             <pre>{JSON.stringify(events, null, 2)}</pre>
         </div>
     )
