@@ -17,13 +17,6 @@ class Credentials(BaseModel):
     api: str
     key: str = ""
 
-
-class EarthquakeDateRequest(BaseModel):
-    year: int
-    month: int
-    day: int
-
-
 class ChatMessage(BaseModel):
     role: str
     content: str
