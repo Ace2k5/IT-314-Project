@@ -20,6 +20,30 @@ export type WeatherEntry = {
 /** City name -> current weather. */
 export type WeatherMap = Record<string, WeatherEntry>
 
+export type LocationWeatherCurrent = {
+    temperature: number
+    temperatureUnit: string
+    weather: number
+    weatherIcon: WeatherKind
+}
+
+export type ForecastDay = {
+    date: string
+    temperatureMax: number
+    temperatureMin: number
+    weather: number
+    weatherIcon: WeatherKind
+}
+
+export type LocationForecast = {
+    latitude: number
+    longitude: number
+    timezone: string
+    place: string | null
+    current: LocationWeatherCurrent
+    daily: ForecastDay[]
+}
+
 /** `[west, south, east, north]`, straight from GDACS. */
 export type BBox = [number, number, number, number]
 
