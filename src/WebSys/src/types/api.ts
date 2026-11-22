@@ -28,6 +28,7 @@ export type Hull = [number, number][]
 
 export type Intensity = {
     intensity: number
+    radius_km: number | null
     width: number
     height: number
     bbox: BBox
@@ -84,4 +85,30 @@ export type NewsItem = {
     url: string
     summary: string
     provider: string
+}
+
+/** `[longitude, latitude]` pair. */
+export type Coordinate = [number, number]
+
+export type TyphoonEvent = {
+    eventid: number
+    description: string
+    severity: number | null
+    severitytext: string | null
+    alertlevel: string | null
+    initialdate: string | null
+    enddate: string | null
+    center: Coordinate | null
+    position: Coordinate | null
+    radius_km: number | null
+    bbox: BBox | null
+    hull: Hull | null
+    timestamp: string | null
+    wind_fields: Intensity[]
+    /** Track positions as `[longitude, latitude]`, oldest first. */
+    track: Coordinate[]
+    /** Advisory labels parallel to `track`; same length. */
+    track_times: string[] | null
+    /** Compass bearing of the final segment, 0 = north, clockwise. */
+    heading_deg: number | null
 }
