@@ -1,11 +1,780 @@
-.map-wrapper .map-container {
+.map-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* The navbar is fixed above the page, so the stage reserves its height and
+   centers the map below it. The open navbar can never cover the map. */
+.map-stage {
     display: flex;
     justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: calc(var(--navbar-height) + 24px) 24px 24px;
 }
+
+.map-shell {
+    position: relative;
+    width: min(75vw, 1180px);
+    height: min(75vh, calc(100vh - var(--navbar-height) - 96px));
+}
+
+.map-canvas {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+}
+
+.map-canvas .leaflet-map {
+    width: 100%;
+    height: 100%;
+    font-family: var(--font-family);
+}
+
+/* Leaflet's default controls are the only "unstyled" part of the map. */
+.map-canvas .leaflet-control-zoom {
+    overflow: hidden;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1);
+}
+
+.map-canvas .leaflet-control-zoom a {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    background-color: var(--surface);
+    color: var(--ink);
+    border-bottom: none;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.map-canvas .leaflet-control-zoom a:first-child {
+    border-bottom: 1px solid var(--line);
+}
+
+.map-canvas .leaflet-control-zoom a:hover {
+    background-color: var(--surface-tint);
+    color: var(--calm-blue);
+}
+
+.map-canvas .leaflet-control-attribution {
+    padding: 2px 6px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
+    font-size: 10px;
+}
+
+.map-canvas .leaflet-control-attribution a {
+    color: var(--calm-blue);
+}
+
+/* ------------------------------------------------------------------ */
+/* Map overlays                                                        */
+/* ------------------------------------------------------------------ */
+
+.map-identity {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+}
+
+.map-live-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background-color: var(--calm-blue);
+    box-shadow: 0 0 0 3px var(--surface-tint);
+    animation: live-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 3px var(--surface-tint);
+    }
+    50% {
+        box-shadow: 0 0 0 5px var(--surface-tint);
+    }
+}
+
+.map-identity-text strong {
+    display: block;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+}
+
+.map-identity-text span {
+    display: block;
+    margin-top: 1px;
+    color: var(--ink-muted);
+    font-size: 11px;
+}
+
+.map-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 1100;
+    padding: 10px 12px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+}
+
+.map-legend h2 {
+    margin: 0 0 6px;
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.map-legend ul {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.map-legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+/* Weather layer switch */
+
+.map-layer-toggle {
+    position: absolute;
+    top: 80px;
+    right: 16px;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(6px);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.map-layer-toggle img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.switch-track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border-radius: var(--radius-pill);
+    background-color: var(--line-strong);
+    transition: background-color var(--speed) var(--ease);
+}
+
+.switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: white;
+    transition: transform var(--speed) var(--ease);
+}
+
+.map-layer-toggle.on .switch-track {
+    background-color: var(--calm-blue);
+}
+
+.map-layer-toggle.on .switch-thumb {
+    transform: translateX(14px);
+}
+
+.legend-swatch {
+    width: 20px;
+    height: 0;
+    border-top: 3px solid transparent;
+    border-radius: 2px;
+}
+
+.legend-earthquake {
+    border-color: red;
+}
+
+.legend-wind {
+    border-color: green;
+}
+
+.legend-track {
+    border-top-style: dashed;
+    border-color: blue;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bottom dock                                                         */
+/* ------------------------------------------------------------------ */
+
+.hazard-dock {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    z-index: 1150;
+    display: flex;
+    gap: 10px;
+}
+
+.hazard-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: var(--shadow-2);
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        box-shadow var(--speed) var(--ease);
+}
+
+.hazard-button img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.hazard-button:hover {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+}
+
+.hazard-button:focus-visible {
+    outline: 2px solid var(--calm-blue);
+    outline-offset: 2px;
+}
+
+.hazard-button.active {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+    box-shadow:
+        0 0 0 2px var(--surface-tint),
+        var(--shadow-2);
+}
+
+/* A selected hazard shows a blue dot on its button. */
+.hazard-button.has-selection::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--calm-blue);
+}
+
+/* ------------------------------------------------------------------ */
+/* Floating event window                                                */
+/* ------------------------------------------------------------------ */
+
+.hazard-window {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    width: min(420px, 78vw);
+    max-height: min(45vh, 420px);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3);
+    overflow: hidden;
+    animation: window-in 160ms var(--ease);
+}
+
+@keyframes window-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.hazard-window-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background-color: var(--surface-muted);
+    border-bottom: 1px solid var(--line);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.hazard-window.dragging .hazard-window-header {
+    cursor: grabbing;
+}
+
+.hazard-window-header img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.hazard-window-header h3 {
+    flex: 1;
+    margin: 0;
+    font-size: 14px;
+}
+
+.hazard-window-close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.hazard-window-close:hover {
+    background-color: var(--surface);
+    border-color: var(--line);
+}
+
+.hazard-window-body {
+    overflow-y: auto;
+}
+
+.hazard-window-note {
+    margin: 0;
+    padding: 14px;
+    color: var(--ink-muted);
+    font-size: 13px;
+}
+
+/* Event list */
+
+.hazard-option-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+}
+
+.hazard-option-list li button {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 8px;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--speed) var(--ease);
+}
+
+.hazard-option-list li button:hover {
+    background-color: var(--surface-tint);
+}
+
+.hazard-option-list li button.selected {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+}
+
+.hazard-option-date {
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.hazard-option-title {
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.hazard-option-badge {
+    justify-self: start;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Selected event details */
+
+.hazard-details {
+    padding: 14px;
+}
+
+.hazard-details-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.hazard-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    margin: 0 0 10px;
+    font-size: 12px;
+}
+
+.hazard-facts dt {
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.hazard-facts dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.hazard-details-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.hazard-link {
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--calm-blue);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.hazard-link:hover {
+    color: color-mix(in srgb, var(--calm-blue) 65%, var(--calm-black));
+}
+
+/* ------------------------------------------------------------------ */
+/* Shelters panel                                                      */
+/* ------------------------------------------------------------------ */
+
+.shelter-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+}
+
+.shelter-location {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.shelter-location p {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.shelter-action {
+    align-self: flex-start;
+    padding: 8px 14px;
+    background-color: var(--calm-blue);
+    color: var(--ink-on-blue);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.shelter-action:hover {
+    background-color: color-mix(in srgb, var(--calm-blue) 86%, var(--calm-black));
+}
+
+.shelter-action:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.shelter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.shelter-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.shelter-control > span {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ink-muted);
+}
+
+.shelter-control strong {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.shelter-control input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    margin: 5px 0;
+    background-color: var(--line-strong);
+    border-radius: var(--radius-pill);
+    outline: none;
+}
+
+.shelter-control input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background-color: var(--calm-blue);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+}
+
+.shelter-control input[type='range']::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: var(--calm-blue);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+}
+
+.shelter-control input[type='range']:focus-visible {
+    outline: 2px solid var(--calm-blue);
+    outline-offset: 4px;
+}
+
+.shelter-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.shelter-check input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--calm-blue);
+}
+
+.shelter-count {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.shelter-card {
+    padding: 12px;
+    background-color: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.shelter-type {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.shelter-card h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.shelter-distance {
+    margin: 3px 0 0;
+    color: var(--calm-blue);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.shelter-address {
+    margin: 3px 0 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+}
+
+.shelter-empty {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.shelter-carousel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.shelter-carousel button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease);
+}
+
+.shelter-carousel button:hover:not(:disabled) {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+}
+
+.shelter-carousel button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.shelter-carousel span {
+    min-width: 60px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* News                                                                */
+/* ------------------------------------------------------------------ */
+
+.disaster-news {
+    width: min(1180px, 90vw);
+    margin: 0 auto;
+    padding: 8px 0 56px;
+}
+
+.news-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.news-heading::before {
+    content: '';
+    width: 25px;
+    height: 3px;
+    border-radius: 2px;
+    background-color: var(--calm-blue);
+}
+
+.disaster-news .news-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* The first story gets the full width as a lead card. */
+.disaster-news .news-item:first-child {
+    grid-column: 1 / -1;
+}
+
+.disaster-news .news-item:first-child .news-label {
+    font-size: 20px;
+}
+
+.disaster-news .news-item:first-child .news-summary {
+    font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Leaflet markers                                                     */
+/* ------------------------------------------------------------------ */
 
 /* Leaflet's default divIcon styling paints a white box behind the marker. */
 .weather-marker,
-.shelter-marker {
+.shelter-marker,
+.cyclone-icon,
+.user-location-marker {
     background: transparent;
     border: none;
 }
@@ -15,4 +784,63 @@
     text-align: center;
     font-size: 12px;
     line-height: 1.15;
+}
+
+.shelter-marker img,
+.user-location-marker img {
+    transition:
+        transform var(--speed) var(--ease),
+        filter var(--speed) var(--ease);
+}
+
+.shelter-marker.selected img {
+    filter: drop-shadow(0 0 4px var(--calm-blue));
+    transform: scale(1.12);
+}
+
+.user-location-marker img {
+    width: 36px;
+    height: 36px;
+}
+
+/* Icons that appear as layers load or windows open. The duration comes from
+   the Appearance tab. Keep the transform on an inner element: Leaflet uses the
+   outer marker element's transform for positioning. */
+.leaflet-map .weather-marker > div,
+.leaflet-map .shelter-marker > div,
+.leaflet-map .user-location-marker img,
+.hazard-button img,
+.hazard-window-header img {
+    transform-origin: center bottom;
+    animation: icon-pop var(--icon-pop-speed, 0.25s) var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leaflet-map .weather-marker > div,
+    .leaflet-map .shelter-marker > div,
+    .leaflet-map .user-location-marker img,
+    .hazard-button img,
+    .hazard-window-header img {
+        animation: none;
+    }
+
+    .shelter-marker img,
+    .user-location-marker img {
+        transition: none;
+    }
+
+    .switch-track,
+    .switch-thumb {
+        transition: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hazard-window {
+        animation: none;
+    }
+
+    .map-live-dot {
+        animation: none;
+    }
 }
