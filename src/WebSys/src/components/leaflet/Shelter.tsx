@@ -1,111 +1,134 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
+
 import { escapeHtml } from '../../utils/escapeHtml'
+import { useShelterStore } from '../../stores/useShelterStore'
 import barangayhall from './map_assets/barangayhall.png'
 import campus from './map_assets/campus.png'
 import church from './map_assets/church.png'
 import sportscenter from './map_assets/sportscenter.png'
-
-import { useShelterStore } from '../../stores/useShelterStore'
-import { backend } from '../../api/backendClient'
-import { DETAILED_ZOOM } from './WeatherLayer'
-import type { EvacuationCenters } from '../../types/api'
+import { formatDistanceKm } from './shelterUtils'
+import type { ShelterEntry } from './shelterUtils'
 
 const SHELTER_ICONS: Record<string, string> = {
-    "Barangay Hall": barangayhall,
-    "Campus": campus,
-    "Church": church,
-    "Sports Center": sportscenter,
+    'Barangay Hall': barangayhall,
+    Campus: campus,
+    Church: church,
+    'Sports Center': sportscenter,
 }
 
-function createShelterIcon(name: string, type: string) {
-    const icon = SHELTER_ICONS[type] ?? SHELTER_ICONS["Campus"]
+/** Names are only useful once the map is zoomed in; at country scale they overlap. */
+const LABEL_ZOOM = 12
+
+function createShelterIcon(name: string, type: string, selected: boolean, showLabel: boolean) {
+    const icon = SHELTER_ICONS[type] ?? SHELTER_ICONS.Campus
+    const label = showLabel ? `<div>${escapeHtml(name)}</div>` : ''
     return L.divIcon({
-        className: 'shelter-marker',
+        className: `shelter-marker${selected ? ' selected' : ''}`,
         iconSize: [40, 40],
-        html: `<div><img src="${icon}" height="40" alt="" /><div>${escapeHtml(name)}</div></div>`,
+        html: `<div><img src="${icon}" height="40" alt="" />${label}</div>`,
     })
 }
 
-const MIN_DISTANCE_KM = 3
-
-function haversineDistance(
-    lat1: number, lon1: number,
-    lat2: number, lon2: number,
-): number {
-    const R = 6371
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLon = (lon2 - lon1) * Math.PI / 180
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function filterSheltersByDistance(centers: EvacuationCenters,minDistanceKm: number): EvacuationCenters {
-    const entries = Object.entries(centers)
-    const kept: [string, EvacuationCenters[string]][] = []
-
-    for (const [id, entry] of entries) {
-        let tooClose = false
-        for (const [keptId] of kept) {
-            const keptEntry = centers[keptId]
-            const dist = haversineDistance(
-                entry.lat, entry.lon,
-                keptEntry.lat, keptEntry.lon,
-            )
-            if (dist < minDistanceKm) {
-                tooClose = true
-                break
-            }
-        }
-        if (!tooClose) {
-            kept.push([id, entry])
-        }
-    }
-
-    return Object.fromEntries(kept)
-}
-
-function ZoomListener({ onZoom }: { onZoom: (z: number) => void }) {
+/**
+ * Renders the filtered shelter set. The store's selection decides which popup
+ * is open; selecting from the Shelters window flies here and opens it.
+ */
+export function ShelterMarkers({
+    shelters,
+    enabled,
+}: {
+    shelters: ShelterEntry[]
+    enabled: boolean
+}) {
     const map = useMap()
-    useMapEvents({ zoomend: () => onZoom(map.getZoom()) })
-    useEffect(() => { onZoom(map.getZoom()) }, [map, onZoom])
-    return null
-}
-
-export function ShelterMarkers() {
+    const [zoom, setZoom] = useState(() => map.getZoom())
     const selectedId = useShelterStore((state) => state.selectedId)
     const selectShelter = useShelterStore((state) => state.selectShelter)
     const clearSelection = useShelterStore((state) => state.clearSelection)
-    const [shelters, setShelters] = useState<EvacuationCenters | null>(null)
-    const [zoom, setZoom] = useState(6)
+    const markerRefs = useRef<Record<string, L.Marker | null>>({})
+
+    useMapEvents({
+        zoomend: (event) => setZoom(event.target.getZoom()),
+    })
+
+    const showLabel = zoom >= LABEL_ZOOM
+
+    // Non-selected icons stay stable across selection changes, so only the
+    // markers whose appearance actually changes get the pop animation.
+    const baseIcons = useMemo(() => {
+        const icons = new Map<string, L.DivIcon>()
+        for (const { id, center } of shelters) {
+            icons.set(id, createShelterIcon(center.name, center.type, false, showLabel))
+        }
+        return icons
+    }, [shelters, showLabel])
+
+    const selectedIcon = useMemo(() => {
+        const current = shelters.find((shelter) => shelter.id === selectedId)
+        return current
+            ? createShelterIcon(current.center.name, current.center.type, true, showLabel)
+            : null
+    }, [shelters, selectedId, showLabel])
 
     useEffect(() => {
-        let cancelled = false
-        void (async () => {
-            const res = await backend.getEvacuationCenters()
-            if (cancelled) return
-            setShelters(res)
-        })()
-        return () => { cancelled = true }
-    }, [])
+        if (!enabled || !selectedId) return
 
-    const visible = zoom >= DETAILED_ZOOM ? filterSheltersByDistance(shelters!, MIN_DISTANCE_KM) : null
-    return (<>
-        <ZoomListener onZoom={setZoom} />
-        {visible && Object.entries(visible).map(([event_id, entry]) => (
-            <Marker
-                key={event_id}
-                position={[entry.lat, entry.lon]}
-                icon={createShelterIcon(entry.name, entry.type)}
-            >
-                <Popup>
-                    {entry.name}
-                </Popup>
-            </Marker>
-        ))}
-    </>)
+        const marker = markerRefs.current[selectedId]
+        if (!marker) return
+
+        const position = marker.getLatLng()
+        if (!map.getBounds().contains(position)) {
+            map.flyTo(position, Math.max(map.getZoom(), 13), { duration: 0.6 })
+        }
+        marker.openPopup()
+    }, [enabled, selectedId, map])
+
+    if (!enabled) return null
+
+    return (
+        <>
+            {shelters.map(({ id, center, distanceKm }) => {
+                const selected = id === selectedId
+                return (
+                    <Marker
+                        key={id}
+                        ref={(marker) => {
+                            markerRefs.current[id] = marker
+                        }}
+                        position={[center.lat, center.lon]}
+                        icon={selected ? (selectedIcon ?? baseIcons.get(id)) : baseIcons.get(id)}
+                        zIndexOffset={selected ? 500 : 0}
+                        eventHandlers={{
+                            click: () => selectShelter(id),
+                            popupclose: () => {
+                                if (useShelterStore.getState().selectedId === id) {
+                                    clearSelection()
+                                }
+                            },
+                        }}
+                    >
+                        <Popup>
+                            <strong>{center.name}</strong>
+                            <br />
+                            {center.type}
+                            {distanceKm !== null ? (
+                                <>
+                                    <br />
+                                    {formatDistanceKm(distanceKm)} away
+                                </>
+                            ) : null}
+                            {center.address ? (
+                                <>
+                                    <br />
+                                    {center.address}
+                                </>
+                            ) : null}
+                        </Popup>
+                    </Marker>
+                )
+            })}
+        </>
+    )
 }
