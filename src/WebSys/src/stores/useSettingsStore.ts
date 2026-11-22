@@ -3,11 +3,13 @@ import { create } from 'zustand'
 import type { ModelInfo } from '../types/api'
 
 type SettingsState = {
+    username: string
     api: string
     apiKey: string
     searchKey: string
     selectedModel: string
     models: ModelInfo[]
+    setUsername: (username: string) => void
     setApi: (api: string) => void
     setApiKey: (apiKey: string) => void
     setSearchKey: (searchKey: string) => void
@@ -17,6 +19,7 @@ type SettingsState = {
 }
 
 const INITIAL_STATE = {
+    username: '',
     api: '',
     apiKey: '',
     searchKey: '',
@@ -33,6 +36,7 @@ const INITIAL_STATE = {
  */
 export const useSettingsStore = create<SettingsState>((set) => ({
     ...INITIAL_STATE,
+    setUsername: (username) => set({ username }),
     setApi: (api) => set({ api }),
     setApiKey: (apiKey) => set({ apiKey }),
     setSearchKey: (searchKey) => set({ searchKey }),
