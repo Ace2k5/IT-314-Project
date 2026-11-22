@@ -7,6 +7,8 @@
  */
 export type Loader<T> = () => Promise<T | null>
 
+
+/* Each call of createCache will create an entirely new cache for type T */
 export function createCache<T>(loader: Loader<T>, ttlMs: number): () => Promise<T | null> {
     let cached: T | null = null
     let fetchedAt = 0
