@@ -1,0 +1,88 @@
+.debug-component {
+    width: min(860px, 92vw);
+    margin: calc(var(--navbar-height) + 32px) auto 56px;
+    padding: 24px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+}
+
+.debug-header h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+}
+
+.debug-header p {
+    margin: 4px 0 20px;
+    color: var(--ink-muted);
+    font-size: 13px;
+}
+
+.debug-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.debug-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    background-color: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.debug-card h2 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.debug-btn {
+    align-self: flex-start;
+    padding: 8px 14px;
+    background-color: var(--surface);
+    color: var(--calm-blue);
+    border: 1px solid var(--calm-blue);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.debug-btn:hover {
+    background-color: var(--surface-tint);
+}
+
+.debug-hint {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+}
+
+.debug-result {
+    margin: 0;
+    padding: 8px 10px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.debug-card pre {
+    max-height: 220px;
+    margin: 0;
+    padding: 10px;
+    overflow: auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
