@@ -8,6 +8,7 @@ a global.
 from __future__ import annotations
 
 import logging
+import math
 from io import StringIO
 from typing import Any
 
@@ -117,6 +118,19 @@ def _fetch_weather(positions: dict[str, dict[str, float]]) -> dict[str, dict[str
     return results
 
 
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    radius = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(d_lon / 2) ** 2
+    )
+    return radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
 def register_weather_routes(app: FastAPI) -> None:
     @app.get("/weather")
     def get_weather_cities() -> dict[str, dict[str, Any]]:
@@ -126,6 +140,74 @@ def register_weather_routes(app: FastAPI) -> None:
             weather_cache = _fetch_weather(locations.LOCATIONS)
             util.mark_refreshed("weather_high")
         return weather_cache
+
+    @app.get("/weather/location")
+    def get_location_forecast(latitude: float, longitude: float) -> dict[str, Any]:
+        """Current conditions plus today and four forecast days for one point."""
+        url = weather.build_location_forecast_url(latitude, longitude)
+        try:
+            response = httpx.get(url, timeout=10)
+            response.raise_for_status()
+            payload = response.json()
+        except (httpx.HTTPError, ValueError) as error:
+            log.error("[Weather] The location forecast call failed: %s", error)
+            return {}
+
+        current = payload.get("current") or {}
+        units = payload.get("current_units") or {}
+        daily = payload.get("daily") or {}
+
+        if current.get("temperature_2m") is None:
+            log.warning("[Weather] The location forecast had no current temperature.")
+            return {}
+
+        dates = daily.get("time") or []
+        codes = daily.get("weather_code") or []
+        maxima = daily.get("temperature_2m_max") or []
+        minima = daily.get("temperature_2m_min") or []
+
+        days = [
+            {
+                "date": date,
+                "weather": code,
+                "weather_icon": WEATHER_ICONS.get(code, "sunny"),
+                "temperature_max": maximum,
+                "temperature_min": minimum,
+            }
+            for date, code, maximum, minimum in zip(dates, codes, maxima, minima)
+        ]
+
+        nearest_city: str | None = None
+        nearest_distance: float | None = None
+        for name, position in locations.LOCATIONS.items():
+            distance = _haversine_km(
+                latitude,
+                longitude,
+                position["latitude"],
+                position["longitude"],
+            )
+            if nearest_distance is None or distance < nearest_distance:
+                nearest_city = name
+                nearest_distance = distance
+
+        # Only label the place when the user is actually near a known city.
+        if nearest_distance is not None and nearest_distance > 50:
+            nearest_city = None
+
+        log.info("[Weather] Built a %s-day forecast for %.4f, %.4f.", len(days), latitude, longitude)
+        return {
+            "latitude": latitude,
+            "longitude": longitude,
+            "timezone": payload.get("timezone"),
+            "place": nearest_city,
+            "current": {
+                "temperature": current["temperature_2m"],
+                "temperature_unit": units.get("temperature_2m", "°C"),
+                "weather": current.get("weather_code"),
+                "weather_icon": WEATHER_ICONS.get(current.get("weather_code"), "sunny"),
+            },
+            "daily": days,
+        }
 
 def register_earthquake_routes(app: FastAPI, database: Database) -> None:
     @app.get("/weather/earthquake")
@@ -185,6 +267,58 @@ def register_credential_routes(app: FastAPI, database: Database) -> None:
         # keeping the key in the browser for the lifetime of the tab.
         log.info("[Credentials] Save requested for %s", credentials.api)
         return {"saved": False, "reason": "User profiles are not implemented yet."}
+
+
+def register_auth_routes(app: FastAPI, database: Database) -> None:
+    @app.post("/auth/register")
+    def register_user(request: models.RegisterRequest) -> dict[str, Any]:
+        import hashlib
+        hashed = hashlib.sha256(request.password.encode()).hexdigest()
+        try:
+            database.cursor.execute(
+                "INSERT INTO Users (username, password, api, api_key, search_key) VALUES (?, ?, ?, ?, ?)",
+                (request.username, hashed, request.api, request.api_key, request.search_key),
+            )
+            database.connection.commit()
+            return {"success": True}
+        except Exception:
+            database.connection.rollback()
+            return {"success": False, "error": "Username already taken."}
+
+    @app.post("/auth/login")
+    def login_user(request: models.LoginRequest) -> dict[str, Any]:
+        import hashlib
+        hashed = hashlib.sha256(request.password.encode()).hexdigest()
+        database.cursor.execute(
+            "SELECT id, username, api, api_key, search_key FROM Users WHERE username = ? AND password = ?",
+            (request.username, hashed),
+        )
+        row = database.cursor.fetchone()
+        if not row:
+            return {"success": False, "error": "Invalid username or password."}
+        return {
+            "success": True,
+            "username": row["username"],
+            "api": row["api"],
+            "api_key": row["api_key"],
+            "search_key": row["search_key"],
+        }
+
+    @app.get("/auth/me")
+    def get_current_user(username: str) -> dict[str, Any] | None:
+        database.cursor.execute(
+            "SELECT username, api, api_key, search_key FROM Users WHERE username = ?",
+            (username,),
+        )
+        row = database.cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "username": row["username"],
+            "api": row["api"],
+            "api_key": row["api_key"],
+            "search_key": row["search_key"],
+        }
 
 
 def register_model_routes(app: FastAPI) -> None:
