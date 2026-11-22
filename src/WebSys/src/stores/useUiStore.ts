@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 
 /** The panels that are mutually exclusive: opening one closes the other. */
-export type Panel = 'map' | 'chat' | 'debug'
+export type Panel = 'overview' | 'map' | 'chat' | 'debug'
 
 type UiState = {
-    activePanel: Panel | null
+    activePanel: Panel
     isSettingsOpen: boolean
     togglePanel: (panel: Panel) => void
     closePanel: () => void
@@ -13,15 +13,17 @@ type UiState = {
 }
 
 /**
- * Navigation state. Replaces the `open` / `setOpen` props that used to be
- * threaded from `App` through every toolbar button.
+ * Navigation state. Closing the active tab returns to the Overview, which is
+ * also the landing tab.
  */
 export const useUiStore = create<UiState>((set) => ({
-    activePanel: null,
+    activePanel: 'overview',
     isSettingsOpen: false,
     togglePanel: (panel) =>
-        set((state) => ({ activePanel: state.activePanel === panel ? null : panel })),
-    closePanel: () => set({ activePanel: null }),
+        set((state) => ({
+            activePanel: state.activePanel === panel ? 'overview' : panel,
+        })),
+    closePanel: () => set({ activePanel: 'overview' }),
     toggleSettings: () => set((state) => ({ isSettingsOpen: !state.isSettingsOpen })),
     closeSettings: () => set({ isSettingsOpen: false }),
 }))
