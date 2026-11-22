@@ -1,37 +1,62 @@
-import { useState } from "react";
-import { BackendConnection } from "../../api/receiveAPI";
-import { EarthquakeDebug } from "../leaflet/Earthquake";
-import { Weather } from "../leaflet/Weather";
+import { useState } from 'react'
 
+import { backend } from '../../api/backendClient'
+import { getEvacuationCenters } from '../../cache/evacCenterCache'
+import type { EvacuationCenters } from '../../types/api'
+import './Debug.css'
 
+export function Debug() {
+    const [logs, setLogs] = useState('')
+    const [centers, setCenters] = useState<EvacuationCenters | null>(null)
 
-export function CheckStatus(){
-    const [text, setText] = useState("")
-    const backend = BackendConnection()
-
-    const checkstatus = async () => {
-        const response = await backend.Log("Hello")
-        console.log(response)
-        if (response){
-            setText(response.log_message)
-        }
+    const loadLogs = async () => {
+        const response = await backend.log('The debug panel asked for the log.')
+        setLogs(response ? response.logs : 'The backend did not return a log.')
     }
 
-    return(
-        <>
+    const loadCenters = async () => {
+        setCenters((await getEvacuationCenters()) ?? {})
+    }
+
+    const centerCount = centers ? Object.keys(centers).length : 0
+
+    return (
         <div className="debug-component">
-            <div className="status">
-                <button onClick={checkstatus}>Call Backend</button>
-                {text && <p>{text}</p>}
-            </div>
+            <header className="debug-header">
+                <h1>Debug Panel</h1>
+                <p>Inspect the backend connection and the loaded evacuation centres.</p>
+            </header>
 
-            <div className="earthquakeStatus">
-                <EarthquakeDebug/>
+            <div className="debug-grid">
+                <section className="debug-card">
+                    <h2>Backend log</h2>
+                    <button type="button" className="debug-btn" onClick={loadLogs}>
+                        Call Backend
+                    </button>
+                    {logs ? (
+                        <pre>{logs}</pre>
+                    ) : (
+                        <p className="debug-hint">No log loaded yet.</p>
+                    )}
+                </section>
 
+                <section className="debug-card">
+                    <h2>Evacuation centres</h2>
+                    <button type="button" className="debug-btn" onClick={loadCenters}>
+                        Check Evac Centers
+                    </button>
+                    {centers ? (
+                        <p className="debug-result">
+                            {centerCount} evacuation centre(s) loaded
+                            {centerCount > 0
+                                ? `, first: ${Object.values(centers)[0]?.name ?? ''}`
+                                : '.'}
+                        </p>
+                    ) : (
+                        <p className="debug-hint">No centres loaded yet.</p>
+                    )}
+                </section>
             </div>
         </div>
-
-
-        </>
     )
 }

@@ -1,46 +1,54 @@
-import { useState } from 'react'
-import { ShowDebugPanel } from './components/debug/DebugPanelButton'
-import { ShowMap } from './components/leaflet/MapButton'
-import { ShowChat } from './components/chat/ChatButton'
-import { MMap } from './components/leaflet/Map'
-import { SettingsButton, Settings } from './components/settings/settings'
+import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
+
+import { Chat } from './components/chat/Chat'
+import { ChatToggleButton } from './components/chat/ChatToggleButton'
+import { Debug } from './components/debug/DebugPanel'
+import { MapToggleButton } from './components/leaflet/MapToggleButton'
+import { MapView } from './components/leaflet/MapView'
+import { Overview, OverviewToggleButton } from './components/overview/Overview'
+import { Settings, SettingsToggleButton } from './components/settings/Settings'
+import { useAppearanceStore } from './stores/useAppearanceStore'
+import { useUiStore } from './stores/useUiStore'
 import './navbar.css'
 
+/** How close (in px from the top) the pointer must be for the navbar to show. */
+const NAVBAR_REVEAL_ZONE = 80
+
 function App() {
-  const [open, setOpen] = useState<string | null>(null)
-  return (
-    <>
-    <nav className='navbar'>
+    const activePanel = useUiStore((state) => state.activePanel)
+    const isSettingsOpen = useUiStore((state) => state.isSettingsOpen)
+    const iconPopupSpeed = useAppearanceStore((state) => state.iconPopupSpeed)
+    const [isNavbarVisible, setIsNavbarVisible] = useState(false)
 
-      <div className="map">
-        <div className="map-button">
-          <ShowMap open={open} setOpen={setOpen}/>
+    useEffect(() => {
+        const handlePointerMove = (event: PointerEvent) => {
+            setIsNavbarVisible(event.clientY <= NAVBAR_REVEAL_ZONE)
+        }
+
+        window.addEventListener('pointermove', handlePointerMove)
+        return () => window.removeEventListener('pointermove', handlePointerMove)
+    }, [])
+
+    return (
+        <div
+            className="app-shell"
+            style={{ '--icon-pop-speed': `${iconPopupSpeed}s` } as CSSProperties}
+        >
+            <nav className={`navbar${isNavbarVisible ? ' navbar-visible' : ''}`}>
+                <OverviewToggleButton />
+                <MapToggleButton />
+                <ChatToggleButton />
+                <SettingsToggleButton />
+            </nav>
+
+            {activePanel === 'overview' ? <Overview /> : null}
+            {activePanel === 'map' ? <MapView /> : null}
+            {activePanel === 'chat' ? <Chat /> : null}
+            {activePanel === 'debug' ? <Debug /> : null}
+            {isSettingsOpen ? <Settings /> : null}
         </div>
-      </div>
-
-      <div className="chat-button">
-        <ShowChat open={open} setOpen={setOpen}/>
-      </div>
-
-      <div className="debug-button">
-        <ShowDebugPanel open={open} setOpen={setOpen}/>
-      </div>
-
-      <div className="settings-button">
-        <SettingsButton open={open} setOpen={setOpen}/>
-      </div>
-
-    </nav>
-
-    <div className="map-component">
-      {open === "map" && <MMap/>}
-    </div>
-    <div className="settings-component">
-      {open === "settings" && <Settings open={open} setOpen={setOpen}/>}
-    </div>
-
-    </>
-  )
+    )
 }
 
 export default App

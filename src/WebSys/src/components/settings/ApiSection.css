@@ -1,0 +1,43 @@
+.model-api {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+.model-box {
+    max-height: 250px;
+    margin-top: 16px;
+    padding: 6px;
+    overflow-y: auto;
+    background-color: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+
+.model-box:empty {
+    display: none;
+}
+
+.model-item {
+    display: block;
+    width: 100%;
+    margin-bottom: 2px;
+    padding: 8px 10px;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.model-item:hover {
+    background-color: var(--surface);
+}
+
+.model-item.active {
+    background-color: var(--surface);
+    border-color: var(--calm-blue);
+    font-weight: 600;
+}

@@ -1,0 +1,17 @@
+import { useUiStore } from '../../stores/useUiStore'
+
+export function ChatToggleButton() {
+    const activePanel = useUiStore((state) => state.activePanel)
+    const togglePanel = useUiStore((state) => state.togglePanel)
+    const isOpen = activePanel === 'chat'
+
+    return (
+        <button
+            type="button"
+            className={`nav-button${isOpen ? ' active' : ''}`}
+            onClick={() => togglePanel('chat')}
+        >
+            {isOpen ? 'Close Chat' : 'Chat'}
+        </button>
+    )
+}

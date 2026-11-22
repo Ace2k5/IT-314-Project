@@ -8,7 +8,3 @@ LOCATIONS = {
     "Makati": { "latitude": 14.5695, "longitude": 121.0264 },
     "Caloocan": { "latitude": 14.64882, "longitude": 120.99059 }
 }
-
-REGIONS = {
-  "Manila": { "latitude": 14.583791118408476, "longitude": 121.0082244873047 },
-}

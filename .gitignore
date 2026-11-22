@@ -171,3 +171,10 @@ config.json
 
 # Node Modules
 node_modules/
+
+# external folders
+.kilo
+.acl-recovery
+
+# databsae
+*.db
