@@ -12,7 +12,7 @@ export function MapToggleButton() {
     }
 
     return (
-        <button type="button" onClick={toggle}>
+        <button type="button" className={`nav-button${isOpen ? ' active' : ''}`} onClick={toggle}>
             {isOpen ? 'Close Map' : 'Map'}
         </button>
     )
