@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Polyline } from 'react-leaflet'
 
 import { getEarthquakeEvents } from '../../cache/earthquakeCache'
 import type { EarthquakeEvent, Hull } from '../../types/api'
-import type { HullState } from './MapView'
 
 /** The three intensities the map draws outlines for. */
 const RELEVANT_INTENSITIES: readonly number[] = [4, 6, 8]
@@ -19,47 +19,30 @@ function collectHulls(events: EarthquakeEvent[]): Map<number, Hull> {
     return hulls
 }
 
-function eventLabel(event: EarthquakeEvent): string {
-    return `${event.initialdate} — ${event.description.slice(0, 80)}`
-}
+/**
+ * Draws one selected earthquake. Nothing is rendered until MapView has a
+ * selected event, so the map has no hazard overlay on its own.
+ */
+export function EarthquakeMarkers({ event }: { event: EarthquakeEvent | null }) {
+    if (!event) return null
 
-export function EarthquakeMarkers({ setHull }: HullState) {
-    const [events, setEvents] = useState<EarthquakeEvent[]>([])
-    const [selectedId, setSelectedId] = useState<number | null>(null)
-
-    useEffect(() => {
-        void getEarthquakeEvents().then((fetched) => {
-            setEvents(fetched)
-            if (fetched.length > 0) {
-                setSelectedId(fetched[0].eventid)
-            }
-        })
-    }, [])
-
-    const onChange = (eventId: number | null) => {
-        setSelectedId(eventId)
-        if (eventId === null) {
-            setHull(new Map())
-            return
-        }
-        const event = events.find((e) => e.eventid === eventId)
-        setHull(event ? collectHulls([event]) : new Map())
-    }
+    const hulls = collectHulls([event])
 
     return (
-        <select
-            id="earthquake-select"
-            value={selectedId ?? ''}
-            onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
-        >
-            {events.length === 0 && <option value="">Loading earthquakes…</option>}
-            {events.map((event) => (
-                <option key={event.eventid} value={event.eventid}>
-                    {eventLabel(event)}
-                </option>
+        <>
+            {Array.from(hulls.entries()).map(([intensity, points]) => (
+                <Polyline
+                    key={`eq-${intensity}`}
+                    positions={points.map(([lon, lat]): [number, number] => [lat, lon])}
+                    pathOptions={{ color: 'red', weight: 3 }}
+                />
             ))}
-        </select>
+        </>
     )
+}
+
+function eventLabel(event: EarthquakeEvent): string {
+    return `${event.initialdate} — ${event.description.slice(0, 80)}`
 }
 
 /** Manual inspection of the raw events; handy when the hulls look wrong. */
