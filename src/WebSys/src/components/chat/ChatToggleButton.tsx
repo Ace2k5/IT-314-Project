@@ -6,7 +6,11 @@ export function ChatToggleButton() {
     const isOpen = activePanel === 'chat'
 
     return (
-        <button type="button" onClick={() => togglePanel('chat')}>
+        <button
+            type="button"
+            className={`nav-button${isOpen ? ' active' : ''}`}
+            onClick={() => togglePanel('chat')}
+        >
             {isOpen ? 'Close Chat' : 'Chat'}
         </button>
     )
