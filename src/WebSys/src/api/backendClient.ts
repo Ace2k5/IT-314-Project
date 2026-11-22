@@ -15,6 +15,7 @@ import type {
     EvacuationCenters,
     LogResponse,
     ModelInfo,
+    TyphoonEvent,
     WeatherEntry,
     WeatherKind,
     WeatherMap,
@@ -130,6 +131,18 @@ export const backend = {
             )
         } catch {
             console.error('[backend] The shelters endpoint is unreachable.')
+            return null
+        }
+    },
+
+    async getTyphoon(): Promise<TyphoonEvent[] | null> {
+        try {
+            return await readJson<TyphoonEvent[]>(
+                await fetch(`${BACKEND_URL}/weather/typhoon`),
+                'typhoon',
+            )
+        } catch {
+            console.error(`[backend] The typhoon endpoint is unreachable.`)
             return null
         }
     },
