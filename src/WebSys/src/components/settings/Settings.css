@@ -1,54 +1,228 @@
 .settings-background {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
     z-index: 9999;
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3px);
 }
 
 .settings {
-    position: relative;
     display: flex;
-    width: 500px;
-    height: 500px ;
-    background-color: white;
-    border: 2px solid #333;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    flex-direction: column;
+    width: min(680px, 92vw);
+    height: min(620px, 88vh);
     overflow: hidden;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3);
+    animation: settings-in 180ms var(--ease);
 }
+
+@keyframes settings-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.995);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.settings-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.settings-topbar h2 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+}
+
 .exit-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    z-index: 9999;  
-    font-size: 12px;
-    cursor: pointer;
-    color: #333;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        color var(--speed) var(--ease);
+}
+
+.exit-btn:hover {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+    color: var(--calm-blue);
+}
+
+.settings-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
 }
 
 .sidebar {
-    width: 120px;
-    padding: 20px 10px;
-    border-right: 2px solid #333;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
+    width: 180px;
+    padding: 14px 12px;
+    background-color: var(--surface-muted);
+    border-right: 1px solid var(--line);
+}
+
+.btn-sidebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        color var(--speed) var(--ease);
+}
+
+.btn-sidebar:hover {
+    background-color: var(--surface);
+    color: var(--ink);
+}
+
+.btn-sidebar.active {
+    background-color: var(--surface-tint);
+    border-color: color-mix(in srgb, var(--calm-blue) 30%, white);
+    color: var(--calm-blue);
+}
+
+.btn-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
 }
 
 .settings-content {
     flex: 1;
+    overflow-y: auto;
+    background-color: var(--surface);
+}
+
+/* Shared section content */
+.settings-content h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+}
+
+.section-description {
+    margin: 4px 0 20px;
+    color: var(--ink-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.input-group {
     display: flex;
     flex-direction: column;
-    position: relative;
-    overflow-y: auto;
-    height: 100%;
+    margin-bottom: 14px;
+}
+
+.input-group label {
+    margin-bottom: 6px;
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.input-group input {
+    height: 40px;
+    padding: 0 12px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    transition:
+        border-color var(--speed) var(--ease),
+        box-shadow var(--speed) var(--ease);
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--calm-blue);
+    box-shadow: 0 0 0 3px var(--surface-tint);
+}
+
+/* Shared actions */
+.login-btn,
+.connect-btn,
+.developer-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    margin-top: 6px;
+    padding: 0 16px;
+    background-color: var(--calm-blue);
+    color: var(--ink-on-blue);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 700;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.login-btn:hover,
+.connect-btn:hover,
+.developer-btn:hover {
+    background-color: color-mix(in srgb, var(--calm-blue) 86%, var(--calm-black));
+}
+
+.login-btn:disabled,
+.connect-btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+/* Shared status messages */
+.login-status,
+.connect-status {
+    margin: 14px 0 0;
+    padding: 8px 10px;
+    background-color: var(--surface-tint);
+    border: 1px solid color-mix(in srgb, var(--calm-blue) 22%, white);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings {
+        animation: none;
+    }
 }
