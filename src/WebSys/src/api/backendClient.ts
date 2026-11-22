@@ -13,6 +13,7 @@ import type {
     ChatMessage,
     EarthquakeEvent,
     EvacuationCenters,
+    LocationForecast,
     LogResponse,
     ModelInfo,
     TyphoonEvent,
@@ -20,6 +21,28 @@ import type {
     WeatherKind,
     WeatherMap,
 } from '../types/api'
+
+export type RegisterRequest = {
+    username: string
+    password: string
+    api: string
+    api_key: string
+    search_key: string
+}
+
+export type LoginRequest = {
+    username: string
+    password: string
+}
+
+export type AuthResult = {
+    success: boolean
+    error?: string
+    username?: string
+    api?: string
+    api_key?: string
+    search_key?: string
+}
 
 const BACKEND_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:9999'
 
@@ -46,6 +69,28 @@ type RawWeatherEntry = {
     temperature_unit: string
     weather: string
     weather_icon: WeatherKind
+}
+
+type RawForecastDay = {
+    date: string
+    temperature_max: number
+    temperature_min: number
+    weather: number
+    weather_icon: WeatherKind
+}
+
+type RawLocationForecast = {
+    latitude: number
+    longitude: number
+    timezone: string
+    place: string | null
+    current: {
+        temperature: number
+        temperature_unit: string
+        weather: number
+        weather_icon: WeatherKind
+    }
+    daily: RawForecastDay[]
 }
 
 function toWeatherMap(raw: Record<string, RawWeatherEntry> | null): WeatherMap | null {
@@ -109,6 +154,42 @@ export const backend = {
             return toWeatherMap(await readJson<Record<string, RawWeatherEntry>>(response, 'weather'))
         } catch {
             console.error('[backend] The weather endpoint is unreachable.')
+            return null
+        }
+    },
+
+    /** Current conditions and the forecast for an arbitrary user location. */
+    async getLocationWeather(latitude: number, longitude: number): Promise<LocationForecast | null> {
+        try {
+            const params = new URLSearchParams({
+                latitude: String(latitude),
+                longitude: String(longitude),
+            })
+            const response = await fetch(`${BACKEND_URL}/weather/location?${params.toString()}`)
+            const raw = await readJson<RawLocationForecast>(response, 'weather/location')
+            if (!raw || !raw.current || !Array.isArray(raw.daily)) return null
+
+            return {
+                latitude: raw.latitude,
+                longitude: raw.longitude,
+                timezone: raw.timezone,
+                place: raw.place,
+                current: {
+                    temperature: raw.current.temperature,
+                    temperatureUnit: raw.current.temperature_unit,
+                    weather: raw.current.weather,
+                    weatherIcon: raw.current.weather_icon,
+                },
+                daily: raw.daily.map((day) => ({
+                    date: day.date,
+                    temperatureMax: day.temperature_max,
+                    temperatureMin: day.temperature_min,
+                    weather: day.weather,
+                    weatherIcon: day.weather_icon,
+                })),
+            }
+        } catch {
+            console.error('[backend] The location weather endpoint is unreachable.')
             return null
         }
     },
@@ -202,6 +283,34 @@ export const backend = {
             })
         } catch {
             console.error('[backend] The chat endpoint is unreachable.')
+            return null
+        }
+    },
+
+    async loginUser(request: LoginRequest): Promise<AuthResult | null> {
+        try {
+            const response = await fetch(`${BACKEND_URL}/auth/login`, {
+                method: 'POST',
+                headers: JSON_HEADERS,
+                body: JSON.stringify(request),
+            })
+            return await readJson<AuthResult>(response, 'auth/login')
+        } catch {
+            console.error('[backend] The login endpoint is unreachable.')
+            return null
+        }
+    },
+
+    async registerUser(request: RegisterRequest): Promise<AuthResult | null> {
+        try {
+            const response = await fetch(`${BACKEND_URL}/auth/register`, {
+                method: 'POST',
+                headers: JSON_HEADERS,
+                body: JSON.stringify(request),
+            })
+            return await readJson<AuthResult>(response, 'auth/register')
+        } catch {
+            console.error('[backend] The register endpoint is unreachable.')
             return null
         }
     },
