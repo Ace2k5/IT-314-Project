@@ -3,9 +3,8 @@ import type { FormEvent } from 'react'
 
 import { backend } from '../../api/backendClient'
 import { useSettingsStore } from '../../stores/useSettingsStore'
+import type { SettingsSection } from './sections'
 import './ApiSection.css'
-
-export type SettingsSection = 'api'
 
 type SectionButtonProps = {
     activeSection: SettingsSection
@@ -19,7 +18,20 @@ export function ApiSectionButton({ activeSection, setActiveSection }: SectionBut
             className={`btn-sidebar${activeSection === 'api' ? ' active' : ''}`}
             onClick={() => setActiveSection('api')}
         >
-            API
+            <svg
+                className="btn-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+            >
+                <circle cx="8" cy="12" r="3.5" />
+                <path d="M11.5 12H20M17 12v3M20 12v2" />
+            </svg>
+            <span>API</span>
         </button>
     )
 }
@@ -62,6 +74,9 @@ export function ApiSection() {
     return (
         <form className="model-api" onSubmit={connect}>
             <h2>API Configuration</h2>
+            <p className="section-description">
+                Connect an OpenAI-compatible endpoint, then pick the model to use.
+            </p>
 
             <div className="input-group">
                 <label htmlFor="endpoint">Endpoint</label>
