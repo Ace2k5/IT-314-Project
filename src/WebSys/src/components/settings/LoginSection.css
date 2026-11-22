@@ -1,0 +1,95 @@
+.login-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+.login-toggle {
+    margin: 18px 0 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+.toggle-link {
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--calm-blue);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.toggle-link:hover {
+    color: color-mix(in srgb, var(--calm-blue) 65%, var(--calm-black));
+}
+
+.btn-avatar {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    background-color: var(--surface-tint);
+    border-radius: 50%;
+}
+
+.account-profile {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 24px;
+    text-align: center;
+}
+
+.account-avatar {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 18px;
+    object-fit: cover;
+    background-color: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px var(--surface-tint);
+}
+
+.account-label {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.account-username {
+    margin: 2px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.account-logout {
+    margin-top: 20px;
+    padding: 9px 18px;
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        color var(--speed) var(--ease);
+}
+
+.account-logout:hover {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+    color: var(--calm-blue);
+}
