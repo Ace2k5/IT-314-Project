@@ -39,3 +39,23 @@ class Shelter(BaseModel):
     lon: float
     type: str
     address: str | None = None
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    api: str = ""
+    api_key: str = ""
+    search_key: str = ""
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    username: str
+    api: str
+    api_key: str
+    search_key: str
