@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 import datetime
 
 from backend import errors
-from backend.api import earthquake, stream_message, util, weather, shelters
+from backend.api import earthquake, stream_message, util, weather, shelters, typhoon
 from backend.geography import locations
 from backend.request_models import models
 from backend.sql.db import Database
@@ -136,6 +136,18 @@ def register_earthquake_routes(app: FastAPI, database: Database) -> None:
         events = earthquake.call_gdacs_earthquake(database)
         if not events:
             log.info("[Earthquake] No events for the requested date.")
+            return []
+        return events
+    
+def register_typhoon_routes(app: FastAPI, database: Database) -> None:
+    @app.get("/weather/typhoon")
+    def get_typhoon() -> list[dict[str, Any]]:
+        now = datetime.datetime.now()
+        initial_date = now.replace(year=1980, month=1, day=1, hour=0, minute=0, second=0)
+        log.info("[Earthquake] Finding all Earthquakes from %s to %r", initial_date, now)
+        events = typhoon.call_gdacs_typhoon(database)
+        if not events:
+            log.info("[Typhoon] No events for requested data.")
             return []
         return events
 
