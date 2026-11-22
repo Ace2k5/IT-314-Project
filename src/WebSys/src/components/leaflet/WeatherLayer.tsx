@@ -1,26 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 
 import { getCityWeather, pickRegions } from '../../cache/weatherCache'
-import type { WeatherEntry, WeatherKind, WeatherMap } from '../../types/api'
+import type { WeatherEntry, WeatherMap } from '../../types/api'
 import { escapeHtml } from '../../utils/escapeHtml'
-import sunnyIcon from './map_assets/sunny.png'
-import stormyIcon from './map_assets/stormy.png'
-import rainyIcon from './map_assets/rainy.png'
-import cloudyIcon from './map_assets/cloudy.png'
-import snowyIcon from './map_assets/snowy.png'
+import { WEATHER_ICONS } from '../weather/weatherIcons'
 
 /** Above this zoom the map shows every city; below it, one marker per region. */
 export const DETAILED_ZOOM = 12
-
-const WEATHER_ICONS: Record<WeatherKind, string> = {
-    sunny: sunnyIcon,
-    stormy: stormyIcon,
-    rainy: rainyIcon,
-    cloudy: cloudyIcon,
-    snowy: snowyIcon,
-}
 
 function createWeatherIcon(city: string, entry: WeatherEntry) {
     const icon = WEATHER_ICONS[entry.weatherIcon] ?? WEATHER_ICONS.sunny
@@ -65,6 +53,15 @@ export function WeatherLayer() {
         }
     }, [])
 
+    // Icons only change when the weather data changes, not on a zoom re-render.
+    const icons = useMemo(() => {
+        const cached = new Map<string, L.DivIcon>()
+        for (const [city, entry] of Object.entries(weather)) {
+            cached.set(city, createWeatherIcon(city, entry))
+        }
+        return cached
+    }, [weather])
+
     const visible = zoom >= DETAILED_ZOOM ? weather : pickRegions(weather)
 
     return (
@@ -73,7 +70,7 @@ export function WeatherLayer() {
                 <Marker
                     key={city}
                     position={[entry.latitude, entry.longitude]}
-                    icon={createWeatherIcon(city, entry)}
+                    icon={icons.get(city)}
                 >
                     <Popup>
                         {city}: {Math.round(entry.temperature)}
