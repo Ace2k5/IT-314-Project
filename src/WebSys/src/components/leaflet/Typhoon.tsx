@@ -1,33 +1,61 @@
-import { getTyphoon } from '../../cache/typhoonCache'
-import { useEffect, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Marker, Polyline } from 'react-leaflet'
+import type { LatLngExpression } from 'leaflet'
+import L from 'leaflet'
+
 import type { TyphoonEvent } from '../../types/api'
-import type { HullByIntensity } from './MapView'
+import cycloneImg from './map_assets/cyclone.png'
+
+/** Intensity -> hull outline, as `[longitude, latitude]` pairs. */
+type HullByIntensity = Map<number, [number, number][]>
+
+type CycloneState = {
+    position: [number, number] | null
+    heading: number | null
+}
 
 /** Wind field classes the map draws outlines for. */
 const RELEVANT_WIND_FIELDS: readonly number[] = [60, 90, 120]
 
 const ANIMATION_DURATION_MS = 4000
 
-function collectHulls(events: TyphoonEvent[]): HullByIntensity {
-    const hulls = new Map<number, [number, number][]>()
-    for (const event of events) {
-        if (event.hull) {
-            hulls.set(60, event.hull)
+const CYCLONE_ICON = L.divIcon({
+    className: 'cyclone-icon',
+    html: `<img src="${cycloneImg}" alt="" style="width:32px;height:32px" />`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+})
+
+function CycloneMarker({ position, heading }: { position: [number, number]; heading: number }) {
+    const markerRef = useRef<L.Marker | null>(null)
+
+    useEffect(() => {
+        const image = markerRef.current?.getElement()?.querySelector('img')
+        if (image instanceof HTMLImageElement) {
+            image.style.transform = `rotate(${heading}deg)`
         }
-        for (const field of event.wind_fields ?? []) {
-            if (!RELEVANT_WIND_FIELDS.includes(field.intensity)) continue
-            if (!field.hull) continue
-            hulls.set(field.intensity, field.hull)
-        }
+    }, [heading])
+
+    return <Marker ref={markerRef} position={position as LatLngExpression} icon={CYCLONE_ICON} />
+}
+
+function collectHulls(event: TyphoonEvent): HullByIntensity {
+    const hulls: HullByIntensity = new Map()
+    if (event.hull) {
+        hulls.set(60, event.hull)
+    }
+    for (const field of event.wind_fields ?? []) {
+        if (!RELEVANT_WIND_FIELDS.includes(field.intensity)) continue
+        if (!field.hull) continue
+        hulls.set(field.intensity, field.hull)
     }
     return hulls
 }
 
-function eventLabel(event: TyphoonEvent): string {
-    const date = event.initialdate ?? 'unknown'
-    const name = event.description ?? `Event ${event.eventid}`
-    return `${date} — ${name.slice(0, 80)}`
+/** Leaflet order (`[lat, lon]`), or null when the track is missing. */
+function toLeafletTrack(event: TyphoonEvent): [number, number][] | null {
+    if (!Array.isArray(event.track) || event.track.length < 2) return null
+    return event.track.map(([lon, lat]): [number, number] => [lat, lon])
 }
 
 /** Compass bearing from p0 to p1, 0 = north and clockwise. */
@@ -44,63 +72,45 @@ function bearingDeg(p0: [number, number], p1: [number, number]): number {
     return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
 }
 
-export function TyphoonMarkers({
-    setHull,
-    setTrack,
-    setCyclone,
-}: {
-    setHull: Dispatch<SetStateAction<HullByIntensity>>
-    setTrack: Dispatch<SetStateAction<[number, number][] | null>>
-    setCyclone: Dispatch<SetStateAction<{ position: [number, number] | null; heading: number | null }>>
-}) {
-    const [typhoons, setTyphoons] = useState<TyphoonEvent[]>([])
-    const [selectedId, setSelectedId] = useState<number | null>(null)
+/**
+ * Draws and animates one selected typhoon. Nothing is rendered until MapView
+ * has a selected event, so the map has no hazard overlay on its own.
+ */
+export function TyphoonMarkers({ event }: { event: TyphoonEvent | null }) {
+    if (!event) return null
+
+    // Remounting per event gives the animation fresh initial state without
+    // resetting state from inside an effect.
+    return <SelectedTyphoon key={event.eventid} event={event} />
+}
+
+function SelectedTyphoon({ event }: { event: TyphoonEvent }) {
+    const hull = useMemo(() => collectHulls(event), [event])
+    const track = useMemo(() => toLeafletTrack(event), [event])
+
+    const [cyclone, setCyclone] = useState<CycloneState>(() => {
+        if (!track) return { position: null, heading: null }
+        return { position: track[0], heading: bearingDeg(track[0], track[1]) }
+    })
+
     const animFrameRef = useRef<number | null>(null)
-    /** Increments on every selection/clear so stale animation frames exit. */
+    /** Increments on every animation run so stale frames exit. */
     const runIdRef = useRef(0)
-    const mountedRef = useRef(false)
 
-    const stopAnimation = () => {
-        runIdRef.current += 1
-        if (animFrameRef.current !== null) {
-            cancelAnimationFrame(animFrameRef.current)
-            animFrameRef.current = null
-        }
-    }
-
-    const clearSelection = () => {
-        stopAnimation()
-        setHull(new Map())
-        setTrack(null)
-        setCyclone({ position: null, heading: null })
-    }
-
-    /** Draw one storm and animate its track from genesis to the last point. */
-    const applyEvent = (event: TyphoonEvent) => {
-        stopAnimation()
-        setHull(collectHulls([event]))
-
-        if (!Array.isArray(event.track) || event.track.length < 2) {
+    useEffect(() => {
+        if (!track) {
             console.warn(
                 `[typhoon] ${event.eventid} has no track; the API response is probably stale. ` +
                 'Restart the backend and hard-reload the page.',
             )
-            setTrack(null)
-            setCyclone({ position: null, heading: null })
             return
         }
 
-        const leafletTrack: [number, number][] = event.track.map(([lon, lat]): [number, number] => [lat, lon])
-        // eslint-disable-next-line no-console
-        console.debug(`[typhoon] animating ${event.eventid} (${leafletTrack.length} points)`)
-        setTrack(leafletTrack)
-        setCyclone({
-            position: leafletTrack[0],
-            heading: bearingDeg(leafletTrack[0], leafletTrack[1]),
-        })
-
-        const runId = runIdRef.current
+        const runId = ++runIdRef.current
         let startTime: number | null = null
+
+        // eslint-disable-next-line no-console
+        console.debug(`[typhoon] animating ${event.eventid} (${track.length} points)`)
 
         const animate = (now: number) => {
             // A newer selection has superseded this run; touch nothing else.
@@ -111,15 +121,15 @@ export function TyphoonMarkers({
             if (startTime === null) startTime = now
 
             const progress = Math.min((now - startTime) / ANIMATION_DURATION_MS, 1)
-            const index = progress * (leafletTrack.length - 1)
+            const index = progress * (track.length - 1)
             const segment = Math.floor(index)
             const fraction = index - segment
 
-            if (segment >= leafletTrack.length - 1) {
-                const last = leafletTrack[leafletTrack.length - 1]
+            if (segment >= track.length - 1) {
+                const last = track[track.length - 1]
                 setCyclone({
                     position: last,
-                    heading: bearingDeg(leafletTrack[leafletTrack.length - 2], last),
+                    heading: bearingDeg(track[track.length - 2], last),
                 })
                 // eslint-disable-next-line no-console
                 console.debug(`[typhoon] animation finished for ${event.eventid}`)
@@ -127,8 +137,8 @@ export function TyphoonMarkers({
                 return
             }
 
-            const from = leafletTrack[segment]
-            const to = leafletTrack[segment + 1]
+            const from = track[segment]
+            const to = track[segment + 1]
             if (!from || !to) {
                 animFrameRef.current = null
                 return
@@ -141,52 +151,34 @@ export function TyphoonMarkers({
         }
 
         animFrameRef.current = requestAnimationFrame(animate)
-    }
 
-    useEffect(() => {
-        mountedRef.current = true
-        void getTyphoon().then((fetched) => {
-            if (!mountedRef.current) return
-            setTyphoons(fetched)
-            if (fetched.length > 0) {
-                setSelectedId(fetched[0].eventid)
-                applyEvent(fetched[0])
-            }
-        })
         return () => {
-            mountedRef.current = false
-            stopAnimation()
+            runIdRef.current += 1
+            if (animFrameRef.current !== null) {
+                cancelAnimationFrame(animFrameRef.current)
+                animFrameRef.current = null
+            }
         }
-        // The setters are stable; applyEvent only needs the fetched event.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const onChange = (eventId: number | null) => {
-        setSelectedId(eventId)
-        if (eventId === null) {
-            clearSelection()
-            return
-        }
-        const event = typhoons.find((e) => e.eventid === eventId)
-        if (event) {
-            applyEvent(event)
-        } else {
-            clearSelection()
-        }
-    }
+    }, [event.eventid, track])
 
     return (
-        <select
-            id="typhoon-select"
-            value={selectedId ?? ''}
-            onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
-        >
-            {typhoons.length === 0 && <option value="">Loading typhoons…</option>}
-            {typhoons.map((event) => (
-                <option key={event.eventid} value={event.eventid}>
-                    {eventLabel(event)}
-                </option>
+        <>
+            {Array.from(hull.entries()).map(([intensity, points]) => (
+                <Polyline
+                    key={`ty-${intensity}`}
+                    positions={points.map(([lon, lat]): [number, number] => [lat, lon])}
+                    pathOptions={{ color: 'green', weight: 2 }}
+                />
             ))}
-        </select>
+            {track && (
+                <Polyline
+                    positions={track}
+                    pathOptions={{ color: 'blue', weight: 2, dashArray: '8, 8' }}
+                />
+            )}
+            {cyclone.position && cyclone.heading !== null && (
+                <CycloneMarker position={cyclone.position} heading={cyclone.heading} />
+            )}
+        </>
     )
 }
