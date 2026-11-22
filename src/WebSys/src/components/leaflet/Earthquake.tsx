@@ -8,9 +8,6 @@ import type { HullState } from './MapView'
 const RELEVANT_INTENSITIES: readonly number[] = [4, 6, 8]
 
 function collectHulls(events: EarthquakeEvent[]): Map<number, Hull> {
-    /* hulls receives a Map of intensity as its key and the Earthquake boundary.
-    * Ex: {"4": [[127..., 16....]], ...} where 4 is the intensity and an array of arrays that contain lat and long
-    */
     const hulls = new Map<number, Hull>()
     for (const event of events) {
         for (const intensity of event.intensities ?? []) {
@@ -26,7 +23,7 @@ function eventLabel(event: EarthquakeEvent): string {
     return `${event.initialdate} — ${event.description.slice(0, 80)}`
 }
 
-export function EarthquakeDatePicker({ setHull }: HullState) {
+export function EarthquakeMarkers({ setHull }: HullState) {
     const [events, setEvents] = useState<EarthquakeEvent[]>([])
     const [selectedId, setSelectedId] = useState<number | null>(null)
 
