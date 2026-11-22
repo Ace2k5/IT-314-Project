@@ -1,0 +1,102 @@
+.appearance-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+.appearance-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 4px 0 20px;
+    padding: 20px;
+    background-color: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.appearance-preview-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    transform-origin: center bottom;
+    animation: icon-pop var(--icon-pop-speed, 0.25s) var(--ease) both;
+}
+
+.appearance-preview span {
+    color: var(--ink-muted);
+    font-size: 11px;
+}
+
+.appearance-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.appearance-control > span {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ink-muted);
+}
+
+.appearance-control strong {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.appearance-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    margin: 5px 0;
+    background-color: var(--line-strong);
+    border-radius: var(--radius-pill);
+    outline: none;
+}
+
+.appearance-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background-color: var(--calm-blue);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+}
+
+.appearance-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: var(--calm-blue);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+}
+
+.appearance-range:focus-visible {
+    outline: 2px solid var(--calm-blue);
+    outline-offset: 4px;
+}
+
+.appearance-note {
+    margin: 12px 0 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .appearance-preview-icon {
+        animation: none;
+    }
+}
