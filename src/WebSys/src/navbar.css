@@ -1,18 +1,170 @@
 :root {
+    /* Palette: the calm blue/white, plus basic black and gray for everything else. */
     --calm-blue: #4f92f0;
-    --calm-white: #f0f0f0
+    --calm-white: #f0f0f0;
+    --calm-black: black;
+    --calm-gray: gray;
+
+    /* Same-hue surfaces and neutrals. All derived from the four colors above. */
+    --surface: white;
+    --surface-muted: var(--calm-white);
+    --surface-tint: color-mix(in srgb, var(--calm-blue) 7%, white);
+    --surface-tint-strong: color-mix(in srgb, var(--calm-blue) 13%, white);
+    --line: color-mix(in srgb, var(--calm-black) 14%, white);
+    --line-strong: color-mix(in srgb, var(--calm-black) 28%, white);
+    --ink: var(--calm-black);
+    --ink-muted: color-mix(in srgb, var(--calm-black) 58%, white);
+    --ink-on-blue: var(--calm-white);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-pill: 999px;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.16);
+
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --speed: 160ms;
+
+    --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    --navbar-height: 60px;
 }
 
-/* The Nav Bar */
+/* ------------------------------------------------------------------ */
+/* Base styles                                                         */
+/* ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-family);
+    color: var(--ink);
+    background-color: var(--surface-muted);
+    background-image: radial-gradient(rgba(0, 0, 0, 0.055) 1px, transparent 1px);
+    background-size: 24px 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+a {
+    color: var(--calm-blue);
+}
+
+::selection {
+    background-color: var(--surface-tint-strong);
+}
+
+/* Shared "icon appears" animation. The duration is set from the Appearance tab. */
+@keyframes icon-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.65) translateY(4px);
+    }
+    65% {
+        opacity: 1;
+        transform: scale(1.06) translateY(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--calm-blue);
+    outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* The Nav Bar                                                         */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The bar is fixed to the top of the page and hidden above the viewport.
+ * App.tsx adds `.navbar-visible` when the pointer is near the top edge,
+ * so showing it never pushes the page content down.
+ */
 .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+
     display: flex;
-    justify-content: center; /* Centers the 3 buttons in the middle */
+    justify-content: center; /* Centers the buttons in the middle */
     align-items: center;     /* Centers them vertically */
-    gap: 30px;               /* Puts space between the buttons */
-    
-    height: 60px;
+    gap: 12px;               /* Puts space between the buttons */
+
+    height: var(--navbar-height);
     background-color: var(--calm-blue);
+    border-bottom: 1px solid color-mix(in srgb, var(--calm-blue) 70%, var(--calm-black));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+
+    transform: translateY(-100%);
+    transition: transform 180ms var(--ease);
+}
+
+/* Shown while the pointer is near the top of the page, or when a
+   navbar button has keyboard focus. */
+.navbar-visible,
+.navbar:focus-within {
+    transform: translateY(0);
+}
+
+.navbar .nav-button {
+    padding: 8px 18px;
+    background-color: rgba(255, 255, 255, 0.1);
     color: var(--calm-white);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional: adds a nice shadow */
-    margin-bottom: 10px;     /* Space between navbar and the map */
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        color var(--speed) var(--ease);
+}
+
+.navbar .nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar .nav-button.active {
+    background-color: white;
+    border-color: white;
+    color: var(--calm-blue);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navbar {
+        transition: none;
+    }
+}
+
+/* Touch screens have no hover, so keep the bar reachable there. */
+@media (hover: none) {
+    .navbar {
+        transform: translateY(0);
+    }
 }
