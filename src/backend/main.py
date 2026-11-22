@@ -41,6 +41,7 @@ shelters.check_table(database)
 
 routes.register_weather_routes(app)
 routes.register_earthquake_routes(app, database)
+routes.register_typhoon_routes(app, database)
 routes.register_status_routes(app)
 routes.register_log_routes(app, log_buffer)
 routes.register_credential_routes(app, database)
