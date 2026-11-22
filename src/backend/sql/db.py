@@ -102,6 +102,15 @@ class Database:
             address TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_shelters_lat_lon ON shelters(lat, lon);
+
+        CREATE TABLE IF NOT EXISTS Users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT NOT NULL UNIQUE,
+            password    TEXT NOT NULL,
+            api         TEXT NOT NULL DEFAULT '',
+            api_key     TEXT NOT NULL DEFAULT '',
+            search_key  TEXT NOT NULL DEFAULT ''
+        );
                             '''
         )
         self.connection.commit()
