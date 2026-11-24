@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 import datetime
 
 from backend import errors
-from backend.api import earthquake, stream_message, util, weather, shelters, typhoon
+from backend.api import earthquake, routing, stream_message, util, weather, shelters, typhoon
 from backend.geography import locations
 from backend.request_models import models
 from backend.sql.db import Database
@@ -238,6 +238,19 @@ def register_status_routes(app: FastAPI) -> None:
     @app.get("/status")
     def get_status() -> dict[str, str]:
         return {"text": "Connection Successful"}
+
+
+def register_route_routes(app: FastAPI) -> None:
+    @app.get("/route")
+    def get_route(
+        from_lat: float,
+        from_lon: float,
+        to_lat: float,
+        to_lon: float,
+    ) -> dict[str, Any]:
+        """Proxy a road route so the frontend can draw it on the map."""
+        route = routing.fetch_route(from_lat, from_lon, to_lat, to_lon)
+        return route or {}
 
 
 def register_shelter_routes(app: FastAPI, database: Database) -> None:
