@@ -42,6 +42,11 @@
     box-sizing: border-box;
 }
 
+/* The chosen typeface lives in a CSS variable set by App.tsx. */
+.app-shell {
+    font-family: var(--font-family);
+}
+
 body {
     margin: 0;
     font-family: var(--font-family);
