@@ -1,18 +1,20 @@
 import { useLocationStore } from '../../stores/useLocationStore'
+import { useRouteStore } from '../../stores/useRouteStore'
 import { useShelterStore } from '../../stores/useShelterStore'
+import { useUiStore } from '../../stores/useUiStore'
 import { formatDistanceKm } from './shelterUtils'
 import type { ShelterEntry } from './shelterUtils'
 
 type ShelterPanelProps = {
     shelters: ShelterEntry[]
     ready: boolean
-    onRequestLocation: () => void
 }
 
 /** Contents of the draggable Shelters window. */
-export function ShelterPanel({ shelters, ready, onRequestLocation }: ShelterPanelProps) {
+export function ShelterPanel({ shelters, ready }: ShelterPanelProps) {
     const status = useLocationStore((state) => state.status)
     const error = useLocationStore((state) => state.error)
+    const openLocationPicker = useUiStore((state) => state.openLocationPicker)
     const selectedId = useShelterStore((state) => state.selectedId)
     const selectShelter = useShelterStore((state) => state.selectShelter)
     const minDistanceKm = useShelterStore((state) => state.minDistanceKm)
@@ -21,6 +23,7 @@ export function ShelterPanel({ shelters, ready, onRequestLocation }: ShelterPane
     const setRadiusMode = useShelterStore((state) => state.setRadiusMode)
     const radiusKm = useShelterStore((state) => state.radiusKm)
     const setRadiusKm = useShelterStore((state) => state.setRadiusKm)
+    const setRouteTarget = useRouteStore((state) => state.setTarget)
 
     const currentIndex = shelters.findIndex((shelter) => shelter.id === selectedId)
     const current = shelters[currentIndex >= 0 ? currentIndex : 0]
@@ -29,8 +32,14 @@ export function ShelterPanel({ shelters, ready, onRequestLocation }: ShelterPane
     const step = (delta: number) => {
         if (shelters.length === 0) return
         const base = currentIndex >= 0 ? currentIndex : 0
-        const next = (base + delta + shelters.length) % shelters.length
-        selectShelter(shelters[next].id)
+        const nextIndex = (base + delta + shelters.length) % shelters.length
+        const next = shelters[nextIndex]
+        selectShelter(next.id)
+        setRouteTarget({
+            id: `shelter:${next.id}`,
+            latitude: next.center.lat,
+            longitude: next.center.lon,
+        })
     }
 
     const countLabel = !ready
@@ -54,14 +63,14 @@ export function ShelterPanel({ shelters, ready, onRequestLocation }: ShelterPane
                     <button
                         type="button"
                         className="shelter-action"
-                        onClick={onRequestLocation}
+                        onClick={openLocationPicker}
                         disabled={status === 'locating'}
                     >
                         {status === 'locating'
                             ? 'Locating…'
                             : status === 'denied'
                               ? 'Try again'
-                              : 'Use my location'}
+                              : 'Set location'}
                     </button>
                 </div>
             ) : (
