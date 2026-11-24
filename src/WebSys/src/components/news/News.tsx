@@ -1,4 +1,5 @@
 import { useNewsStore } from '../../stores/useNewsStore'
+import type { NewsItem } from '../../types/api'
 import './News.css'
 
 function hostOf(url: string): string {
@@ -9,9 +10,15 @@ function hostOf(url: string): string {
     }
 }
 
+type NewsListProps = {
+    /** Defaults to the shared store; the disaster block passes its cached list. */
+    items?: NewsItem[]
+}
+
 /** Renders whatever the last search attached to the answer. Renders nothing when empty. */
-export function NewsList() {
-    const items = useNewsStore((state) => state.items)
+export function NewsList({ items: providedItems }: NewsListProps = {}) {
+    const storeItems = useNewsStore((state) => state.items)
+    const items = providedItems ?? storeItems
 
     if (items.length === 0) return null
 
