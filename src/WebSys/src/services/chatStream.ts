@@ -29,21 +29,21 @@ export async function sendChatMessage(
     input: string,
     sessionId: string,
     { clearDraft = false }: SendOptions = {},
-): Promise<void> {
+): Promise<NewsItem[]> {
     const chat = useChatStore.getState()
 
     if (chat.isLoading) {
         console.warn('[chat] A request is already in flight; ignoring this one.')
-        return
+        return []
     }
 
     const text = input.trim()
-    if (!text) return
+    if (!text) return []
 
     const { api, apiKey, searchKey, selectedModel } = useSettingsStore.getState()
     if (!api || !selectedModel) {
         chat.setError('Pick an endpoint and a model in Settings first.')
-        return
+        return []
     }
 
     chat.appendMessage({ role: 'user', content: text })
@@ -53,6 +53,7 @@ export async function sendChatMessage(
     chat.setLoading(true)
 
     let assistantText = ''
+    let news: NewsItem[] = []
 
     try {
         const response = await backend.chatCompletions({
@@ -66,11 +67,11 @@ export async function sendChatMessage(
 
         if (!response) {
             chat.setError('Could not reach the backend. Is it running on port 9999?')
-            return
+            return []
         }
         if (!response.ok || !response.body) {
             chat.setError(`The model endpoint answered with ${response.status}.`)
-            return
+            return []
         }
 
         const reader = response.body.getReader()
@@ -106,6 +107,7 @@ export async function sendChatMessage(
                     continue
                 }
                 if (parsed.type === 'news_data' && parsed.payload) {
+                    news = parsed.payload
                     useNewsStore.getState().setNews(parsed.payload)
                     continue
                 }
@@ -132,4 +134,6 @@ export async function sendChatMessage(
         chat.setStreamingText('')
         chat.setLoading(false)
     }
+
+    return news
 }
