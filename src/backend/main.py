@@ -49,5 +49,6 @@ routes.register_auth_routes(app, database)
 routes.register_model_routes(app)
 routes.register_chat_routes(app)
 routes.register_shelter_routes(app, database)
+routes.register_route_routes(app)
 
 log.info("[Server started]")
