@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { NEWS_QUERY, sendChatMessage } from '../../services/chatStream'
+import { getCachedNews, loadDisasterNews } from '../../cache/newsCache'
 import { useNewsStore } from '../../stores/useNewsStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { useUiStore } from '../../stores/useUiStore'
@@ -39,41 +39,50 @@ function NewsSkeleton() {
 
 /**
  * Triggers the "latest disasters" search once the endpoint, model, and search
- * key are configured. Waiting until Settings is closed avoids firing a request
- * on every keystroke while the key is being typed.
+ * key are configured. The result lives in newsCache, so switching panels does
+ * not fire the search again.
  */
 export function DisasterNews() {
-    const [sessionId] = useState(() => crypto.randomUUID())
     const api = useSettingsStore((state) => state.api)
     const selectedModel = useSettingsStore((state) => state.selectedModel)
     const searchKey = useSettingsStore((state) => state.searchKey)
     const isSettingsOpen = useUiStore((state) => state.isSettingsOpen)
     const openSettings = useUiStore((state) => state.toggleSettings)
     const items = useNewsStore((state) => state.items)
-    const requested = useRef<string | null>(null)
     const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle')
 
     const isConfigured = Boolean(api.trim() && selectedModel.trim() && searchKey.trim())
-    const fingerprint = `${api.trim()}|${selectedModel.trim()}|${searchKey.trim()}`
+    const newsKey = `${api.trim()}|${selectedModel.trim()}|${searchKey.trim()}`
 
-    const requestNews = useCallback(() => {
-        if (!isConfigured || isSettingsOpen) return
-
-        requested.current = fingerprint
-        useNewsStore.getState().clearNews()
-        setStatus('loading')
-        void sendChatMessage(NEWS_QUERY, sessionId).finally(() => setStatus('done'))
-    }, [fingerprint, isConfigured, isSettingsOpen, sessionId])
+    const cached = getCachedNews(newsKey)
+    const displayItems = cached ?? items
+    const hasLoaded = cached !== null || status === 'done' || items.length > 0
 
     useEffect(() => {
         if (!isConfigured) {
-            requested.current = null
             useNewsStore.getState().clearNews()
             return
         }
-        if (isSettingsOpen || requested.current === fingerprint) return
-        requestNews()
-    }, [fingerprint, isConfigured, isSettingsOpen, requestNews])
+        if (isSettingsOpen || getCachedNews(newsKey) !== null) return
+
+        let cancelled = false
+        useNewsStore.getState().clearNews()
+        void loadDisasterNews(newsKey).then(() => {
+            if (!cancelled) setStatus('done')
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [isConfigured, isSettingsOpen, newsKey])
+
+    const requestNews = () => {
+        if (!isConfigured || isSettingsOpen) return
+
+        setStatus('loading')
+        useNewsStore.getState().clearNews()
+        void loadDisasterNews(newsKey, true).then(() => setStatus('done'))
+    }
 
     if (!isConfigured) {
         return (
@@ -94,9 +103,11 @@ export function DisasterNews() {
         )
     }
 
-    if (items.length > 0) return <NewsList />
+    if (status === 'loading' && displayItems.length === 0) return <NewsSkeleton />
 
-    if (status === 'done') {
+    if (displayItems.length > 0) return <NewsList items={displayItems} />
+
+    if (hasLoaded) {
         return (
             <div className="news-empty">
                 <span className="news-empty-icon">
