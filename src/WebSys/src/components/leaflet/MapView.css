@@ -779,23 +779,74 @@
     border: none;
 }
 
-.weather-marker div,
-.shelter-marker div {
-    text-align: center;
-    font-size: 12px;
-    line-height: 1.15;
+.marker-chip {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-50%);
 }
 
-.shelter-marker img,
-.user-location-marker img {
+.marker-chip-body {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px 3px 5px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-1);
+    white-space: nowrap;
+    cursor: pointer;
     transition:
-        transform var(--speed) var(--ease),
-        filter var(--speed) var(--ease);
+        border-color var(--speed) var(--ease),
+        box-shadow var(--speed) var(--ease);
 }
 
-.shelter-marker.selected img {
-    filter: drop-shadow(0 0 4px var(--calm-blue));
-    transform: scale(1.12);
+.marker-chip-body.compact {
+    padding: 3px;
+}
+
+.marker-chip-body:hover {
+    border-color: var(--calm-blue);
+    box-shadow: var(--shadow-2);
+}
+
+.marker-chip-icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
+.marker-chip-name {
+    max-width: 160px;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+}
+
+.weather-marker .marker-chip-name {
+    max-width: 90px;
+}
+
+.marker-chip-temp {
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.user-location-marker img {
+    transition: transform var(--speed) var(--ease);
+}
+
+.shelter-marker.selected .marker-chip-body {
+    border-color: var(--calm-blue);
+    box-shadow:
+        0 0 0 2px var(--surface-tint),
+        var(--shadow-2);
 }
 
 .user-location-marker img {
@@ -806,8 +857,7 @@
 /* Icons that appear as layers load or windows open. The duration comes from
    the Appearance tab. Keep the transform on an inner element: Leaflet uses the
    outer marker element's transform for positioning. */
-.leaflet-map .weather-marker > div,
-.leaflet-map .shelter-marker > div,
+.leaflet-map .marker-chip-body,
 .leaflet-map .user-location-marker img,
 .hazard-button img,
 .hazard-window-header img {
@@ -815,16 +865,55 @@
     animation: icon-pop var(--icon-pop-speed, 0.25s) var(--ease) both;
 }
 
+/* Popup detail rows, shared by the weather and shelter markers. */
+.map-canvas .leaflet-popup-content-wrapper {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-2);
+}
+
+.map-canvas .leaflet-popup-content {
+    margin: 12px 14px;
+    font-family: var(--font-family);
+    line-height: 1.35;
+}
+
+.marker-detail-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    min-width: 200px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.marker-detail-facts dt {
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.marker-detail-facts dd {
+    margin: 0;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.marker-detail-facts dd.marker-detail-distance {
+    color: var(--calm-blue);
+    font-weight: 600;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .leaflet-map .weather-marker > div,
-    .leaflet-map .shelter-marker > div,
+    .leaflet-map .marker-chip-body,
     .leaflet-map .user-location-marker img,
     .hazard-button img,
     .hazard-window-header img {
         animation: none;
     }
 
-    .shelter-marker img,
     .user-location-marker img {
         transition: none;
     }
