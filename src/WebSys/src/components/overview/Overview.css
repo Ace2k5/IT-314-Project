@@ -36,6 +36,18 @@
     font-variant-numeric: tabular-nums;
 }
 
+.overview-location-change {
+    margin-top: 6px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--calm-blue);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .overview-now {
     display: flex;
     align-items: center;
