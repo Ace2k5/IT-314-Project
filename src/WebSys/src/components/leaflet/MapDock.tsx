@@ -1,12 +1,15 @@
 import { useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
-import type { EarthquakeEvent, TyphoonEvent } from '../../types/api'
+import { useMapDockActions } from '../../hooks/useMapDockActions'
+import { useShelterEntries } from '../../hooks/useShelterEntries'
+import { useHazardStore } from '../../stores/useHazardStore'
 import type { MapPanel } from '../../stores/useMapDockStore'
+import { useShelterDataStore } from '../../stores/useShelterDataStore'
+import { useShelterStore } from '../../stores/useShelterStore'
 import { eventBadge, formatEventDate } from './hazardFormat'
 import { HazardShowcase } from './HazardShowcase'
 import { ShelterPanel } from './ShelterPanel'
-import type { ShelterEntry } from './shelterUtils'
 import cycloneIcon from './map_assets/cyclone.png'
 import earthquakeIcon from './map_assets/earthquake.png'
 import shelterIcon from './map_assets/shelter.png'
@@ -17,26 +20,6 @@ type PickableEvent = {
     initialdate?: string | null
     severitytext?: string | null
     alertlevel?: string | null
-}
-
-type MapDockProps = {
-    earthquakeEvents: EarthquakeEvent[]
-    typhoonEvents: TyphoonEvent[]
-    earthquakeReady: boolean
-    typhoonReady: boolean
-    selectedEarthquake: EarthquakeEvent | null
-    selectedTyphoon: TyphoonEvent | null
-    selectedShelterId: string | null
-    shelters: ShelterEntry[]
-    sheltersReady: boolean
-    openPanel: MapPanel | null
-    onTogglePanel: (panel: MapPanel) => void
-    onClosePanel: () => void
-    onSelectEarthquake: (event: EarthquakeEvent) => void
-    onSelectTyphoon: (event: TyphoonEvent) => void
-    onClearEarthquake: () => void
-    onClearTyphoon: () => void
-    onRequestLocation: () => void
 }
 
 type DragState = {
@@ -101,27 +84,26 @@ function EventOptions<T extends PickableEvent>({
 
 /**
  * The floating dock at the bottom of the map. Earthquakes, Typhoons, and
- * Shelters share one draggable window above it.
+ * Shelters share one draggable window above it. Shared data comes from stores
+ * so MapView keeps ownership of the map layers without prop drilling.
  */
-export function MapDock({
-    earthquakeEvents,
-    typhoonEvents,
-    earthquakeReady,
-    typhoonReady,
-    selectedEarthquake,
-    selectedTyphoon,
-    selectedShelterId,
-    shelters,
-    sheltersReady,
-    openPanel,
-    onTogglePanel,
-    onClosePanel,
-    onSelectEarthquake,
-    onSelectTyphoon,
-    onClearEarthquake,
-    onClearTyphoon,
-    onRequestLocation,
-}: MapDockProps) {
+export function MapDock() {
+    const earthquakeEvents = useHazardStore((state) => state.earthquakes)
+    const typhoonEvents = useHazardStore((state) => state.typhoons)
+    const earthquakeReady = useHazardStore((state) => state.earthquakesReady)
+    const typhoonReady = useHazardStore((state) => state.typhoonsReady)
+    const selectedEarthquake = useHazardStore((state) => state.selectedEarthquake)
+    const selectedTyphoon = useHazardStore((state) => state.selectedTyphoon)
+    const selectEarthquake = useHazardStore((state) => state.selectEarthquake)
+    const selectTyphoon = useHazardStore((state) => state.selectTyphoon)
+    const clearEarthquake = useHazardStore((state) => state.clearEarthquake)
+    const clearTyphoon = useHazardStore((state) => state.clearTyphoon)
+
+    const { openPanel, closePanel, togglePanel } = useMapDockActions()
+    const selectedShelterId = useShelterStore((state) => state.selectedId)
+    const shelters = useShelterEntries()
+    const sheltersReady = useShelterDataStore((state) => state.ready)
+
     const windowRef = useRef<HTMLDivElement | null>(null)
     const dragRef = useRef<DragState | null>(null)
     const [showList, setShowList] = useState(false)
@@ -180,7 +162,7 @@ export function MapDock({
     const openFor = (panel: MapPanel) => {
         // Clicking the active dock button closes its window.
         if (openPanel === panel) {
-            onClosePanel()
+            closePanel()
             return
         }
 
@@ -189,7 +171,7 @@ export function MapDock({
         if (openPanel === null) setOffset({ x: 0, y: 0 })
         if (panel === 'earthquake') setShowList(selectedEarthquake === null)
         if (panel === 'typhoon') setShowList(selectedTyphoon === null)
-        onTogglePanel(panel)
+        togglePanel(panel)
     }
 
     const isEarthquake = openPanel === 'earthquake'
@@ -272,7 +254,7 @@ export function MapDock({
                             type="button"
                             className="hazard-window-close"
                             aria-label="Close event window"
-                            onClick={onClosePanel}
+                            onClick={closePanel}
                         >
                             ×
                         </button>
@@ -285,7 +267,7 @@ export function MapDock({
                                     hazard="earthquake"
                                     event={selectedEarthquake}
                                     onChange={() => setShowList(true)}
-                                    onClear={onClearEarthquake}
+                                    onClear={clearEarthquake}
                                 />
                             ) : (
                                 <EventOptions
@@ -293,7 +275,7 @@ export function MapDock({
                                     ready={earthquakeReady}
                                     selectedId={selectedEarthquake?.eventid ?? null}
                                     onSelect={(event) => {
-                                        onSelectEarthquake(event)
+                                        selectEarthquake(event)
                                         setShowList(false)
                                     }}
                                     emptyLabel="earthquake events"
@@ -305,7 +287,7 @@ export function MapDock({
                                     hazard="typhoon"
                                     event={selectedTyphoon}
                                     onChange={() => setShowList(true)}
-                                    onClear={onClearTyphoon}
+                                    onClear={clearTyphoon}
                                 />
                             ) : (
                                 <EventOptions
@@ -313,7 +295,7 @@ export function MapDock({
                                     ready={typhoonReady}
                                     selectedId={selectedTyphoon?.eventid ?? null}
                                     onSelect={(event) => {
-                                        onSelectTyphoon(event)
+                                        selectTyphoon(event)
                                         setShowList(false)
                                     }}
                                     emptyLabel="typhoon events"
@@ -323,7 +305,6 @@ export function MapDock({
                             <ShelterPanel
                                 shelters={shelters}
                                 ready={sheltersReady}
-                                onRequestLocation={onRequestLocation}
                             />
                         )}
                     </div>
