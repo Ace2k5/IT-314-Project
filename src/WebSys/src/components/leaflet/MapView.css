@@ -933,3 +933,273 @@
         animation: none;
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* Map page on a phone: edge-to-edge map, one column of news           */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .map-page {
+        min-height: 100dvh;
+    }
+
+    /* The map takes the whole viewport above the news, so the 75vw box that
+       keeps it readable on a desktop becomes the full width here. */
+    .map-stage {
+        display: block;
+        min-height: 0;
+        padding: calc(var(--navbar-height) + 10px) 10px 10px;
+    }
+
+    .map-shell {
+        width: 100%;
+        height: calc(100dvh - var(--navbar-height) - 20px);
+        min-height: 360px;
+    }
+
+    .map-canvas {
+        border-radius: var(--radius-md);
+    }
+
+    /* Keep Leaflet's attribution clear of the dock bar. */
+    .map-canvas .leaflet-bottom {
+        bottom: 58px;
+    }
+
+    /* Badges shrink; the legend is the first overlay to go. */
+    .map-legend {
+        display: none;
+    }
+
+    .map-identity {
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+    }
+
+    .map-identity-text span {
+        display: none;
+    }
+
+    .map-layer-toggle {
+        top: 58px;
+        right: 10px;
+        padding: 6px 10px;
+    }
+
+    /* The dock leaves the middle of the map and becomes a bar along the
+       bottom edge, inside the safe area. */
+    .hazard-dock {
+        right: 0;
+        bottom: 0;
+        left: 0;
+        transform: none;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px max(10px, var(--safe-right)) calc(8px + var(--safe-bottom))
+            max(10px, var(--safe-left));
+        background-color: color-mix(in srgb, var(--surface) 94%, transparent);
+        border-top: 1px solid var(--line);
+        backdrop-filter: blur(6px);
+    }
+
+    /* All three buttons still fit one row at 320px wide. */
+    .hazard-button {
+        flex: 0 1 auto;
+        min-width: 0;
+        gap: 6px;
+        padding: 8px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .hazard-button img {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* News sits under the map as a single column. Only the map page adds a
+       gutter here; Overview already pads the page. */
+    .map-page .disaster-news {
+        width: 100%;
+        padding: 20px var(--layout-gutter) calc(40px + var(--safe-bottom));
+    }
+
+    .disaster-news .news-list {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    /* With one column there is no lead card to stand out. */
+    .disaster-news .news-item:first-child .news-label {
+        font-size: 16px;
+    }
+
+    .disaster-news .news-item:first-child .news-summary {
+        font-size: 13px;
+    }
+
+    .news-heading {
+        font-size: 19px;
+    }
+}
+
+/* Small phones. */
+@media (max-width: 480px) {
+    .hazard-button {
+        padding: 8px 6px;
+        font-size: 10px;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Phone dock controls                                                 */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Rendered instead of the floating window at phone widths; see MapDock. Both
+ * are short cards pinned directly above the dock bar, so the map, the hulls and
+ * the typhoon track animation stay visible while an event is selected.
+ */
+
+.dock-picker {
+    position: absolute;
+    right: 10px;
+    bottom: calc(100% + 8px);
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 8px 12px 10px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-2);
+    animation: window-in 160ms var(--ease);
+}
+
+.dock-picker-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.dock-picker-field {
+    color: var(--ink-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.dock-picker-close {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin: -8px -8px -8px 0;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.dock-picker-close:hover {
+    background-color: var(--surface-tint);
+    border-color: var(--line);
+}
+
+.dock-picker-select {
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: 0 10px;
+    background-color: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.dock-picker-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+/* Two lines at most: a long GDACS description must not push the map away. */
+.dock-picker-summary strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 13px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.dock-picker-summary span {
+    color: var(--ink-muted);
+}
+
+/* Shelters: one row instead of a card, a count and a carousel. */
+.dock-shelter-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+}
+
+.dock-shelter-step {
+    display: grid;
+    place-items: center;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    flex: 0 0 auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.dock-shelter-step:hover:not(:disabled) {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+}
+
+.dock-shelter-step:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.dock-shelter-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.dock-shelter-name {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dock-shelter-count {
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}

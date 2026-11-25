@@ -127,14 +127,33 @@ body.alert-active {
     background: rgba(255, 255, 255, 0.12);
 }
 
-@media (max-width: 700px) {
+/* ------------------------------------------------------------------ */
+/* Alert banner on a phone                                             */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
     .alert-banner {
+        top: calc(var(--navbar-height) + 8px);
         flex-wrap: wrap;
+        gap: 10px;
+        width: calc(100% - 20px);
+        padding: 12px;
     }
 
+    .alert-banner-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* The buttons take the full width so neither one is a small target. */
     .alert-banner-actions {
         flex-direction: row;
         width: 100%;
+    }
+
+    .alert-banner-actions > * {
+        flex: 1 1 0;
+        white-space: normal;
     }
 }
 

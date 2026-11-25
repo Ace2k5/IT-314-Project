@@ -173,3 +173,40 @@ a:focus-visible {
         transform: translateY(0);
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* The Nav Bar on a phone                                              */
+/* ------------------------------------------------------------------ */
+
+/* Four pills have to share one narrow row, so they become equal columns
+   instead of sizing themselves to their labels. */
+@media (max-width: 720px) {
+    .navbar {
+        gap: 8px;
+        padding-right: max(var(--layout-gutter), var(--safe-right));
+        padding-left: max(var(--layout-gutter), var(--safe-left));
+    }
+
+    .navbar .nav-button {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0 8px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+}
+
+/* Small phones: tighten the gaps again so no label has to truncate. */
+@media (max-width: 480px) {
+    .navbar {
+        gap: 6px;
+        padding-right: max(10px, var(--safe-right));
+        padding-left: max(10px, var(--safe-left));
+    }
+
+    .navbar .nav-button {
+        padding: 0 4px;
+        font-size: 11px;
+        letter-spacing: -0.01em;
+    }
+}

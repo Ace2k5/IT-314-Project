@@ -13,6 +13,7 @@ import { Settings, SettingsToggleButton } from './components/settings/Settings'
 import { fontStack, useAppearanceStore } from './stores/useAppearanceStore'
 import { useUiStore } from './stores/useUiStore'
 import './navbar.css'
+import './responsive.css'
 
 /** How close (in px from the top) the pointer must be for the navbar to show. */
 const NAVBAR_REVEAL_ZONE = 80
