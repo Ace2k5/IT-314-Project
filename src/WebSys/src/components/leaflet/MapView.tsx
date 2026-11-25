@@ -1,7 +1,7 @@
 import { maplibreGL } from '@maplibre/maplibre-gl-leaflet'
 import { setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Circle, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -131,22 +131,40 @@ export function MapView() {
         void loadShelters()
     }, [loadHazards, loadShelters])
 
+    /** True once the auto-select has run for the current Shelters session. */
+    const autoSelectedRef = useRef(false)
+
     /**
      * Opening the Shelters window (or changing its filters) keeps a valid
      * selection: the nearest shelter is selected when there is none, and a
      * shelter removed by the filters is replaced by the new nearest.
+     *
+     * A selection the user cleared by closing a popup stays cleared. Picking it
+     * back up would reopen the popup they just dismissed, which on a phone is
+     * the main way to read a shelter and then get it out of the way.
      */
     useEffect(() => {
-        if (openPanel !== 'shelter' || !sheltersReady || !coords) return
+        if (openPanel !== 'shelter') {
+            autoSelectedRef.current = false
+            return
+        }
+        if (!sheltersReady || !coords) return
 
         if (sheltersForDisplay.length === 0) {
+            autoSelectedRef.current = true
             if (selectedShelterId !== null) clearShelterSelection()
             return
         }
 
-        if (!sheltersForDisplay.some((shelter) => shelter.id === selectedShelterId)) {
-            selectShelter(sheltersForDisplay[0].id)
+        if (sheltersForDisplay.some((shelter) => shelter.id === selectedShelterId)) {
+            autoSelectedRef.current = true
+            return
         }
+
+        if (selectedShelterId === null && autoSelectedRef.current) return
+
+        autoSelectedRef.current = true
+        selectShelter(sheltersForDisplay[0].id)
     }, [
         openPanel,
         sheltersReady,
