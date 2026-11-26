@@ -3,6 +3,7 @@ import type { LatLngExpression } from 'leaflet'
 import L from 'leaflet'
 
 import { useLocationStore } from '../../stores/useLocationStore'
+import { formatAccuracy } from '../../utils/locationFormat'
 import userMarker from './map_assets/user_marker.png'
 
 const USER_ICON = L.divIcon({
@@ -19,12 +20,13 @@ export function UserLocationMarker() {
     if (!coords) return null
 
     const position: LatLngExpression = [coords.latitude, coords.longitude]
+    const isManual = coords.source === 'manual'
 
     return (
         <>
             <Circle
                 center={position}
-                radius={Math.max(coords.accuracy, 25)}
+                radius={isManual ? 25 : Math.max(coords.accuracy, 25)}
                 pathOptions={{
                     color: 'blue',
                     weight: 1,
@@ -36,7 +38,8 @@ export function UserLocationMarker() {
             <Marker position={position} icon={USER_ICON} zIndexOffset={1000}>
                 <Popup>
                     <strong>Your location</strong>
-                    <br />±{Math.round(coords.accuracy)} m accuracy
+                    <br />
+                    {isManual ? 'Pinned manually' : `±${formatAccuracy(coords.accuracy)} accuracy`}
                 </Popup>
             </Marker>
         </>

@@ -3,6 +3,7 @@ import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 
 import { escapeHtml } from '../../utils/escapeHtml'
+import { useRouteStore } from '../../stores/useRouteStore'
 import { useShelterStore } from '../../stores/useShelterStore'
 import barangayhall from './map_assets/barangayhall.png'
 import campus from './map_assets/campus.png'
@@ -23,11 +24,20 @@ const LABEL_ZOOM = 12
 
 function createShelterIcon(name: string, type: string, selected: boolean, showLabel: boolean) {
     const icon = SHELTER_ICONS[type] ?? SHELTER_ICONS.Campus
-    const label = showLabel ? `<div>${escapeHtml(name)}</div>` : ''
+    const label = showLabel
+        ? `<span class="marker-chip-name">${escapeHtml(name)}</span>`
+        : ''
     return L.divIcon({
         className: `shelter-marker${selected ? ' selected' : ''}`,
-        iconSize: [40, 40],
-        html: `<div><img src="${icon}" height="40" alt="" />${label}</div>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+        popupAnchor: [0, -40],
+        html: `<div class="marker-chip">
+            <div class="marker-chip-body${showLabel ? '' : ' compact'}">
+                <img class="marker-chip-icon" src="${icon}" alt="" />
+                ${label}
+            </div>
+        </div>`,
     })
 }
 
@@ -47,6 +57,8 @@ export function ShelterMarkers({
     const selectedId = useShelterStore((state) => state.selectedId)
     const selectShelter = useShelterStore((state) => state.selectShelter)
     const clearSelection = useShelterStore((state) => state.clearSelection)
+    const setRouteTarget = useRouteStore((state) => state.setTarget)
+    const clearRouteTarget = useRouteStore((state) => state.clearTarget)
     const markerRefs = useRef<Record<string, L.Marker | null>>({})
 
     useMapEvents({
@@ -101,30 +113,42 @@ export function ShelterMarkers({
                         icon={selected ? (selectedIcon ?? baseIcons.get(id)) : baseIcons.get(id)}
                         zIndexOffset={selected ? 500 : 0}
                         eventHandlers={{
-                            click: () => selectShelter(id),
+                            click: () => {
+                                selectShelter(id)
+                                setRouteTarget({
+                                    id: `shelter:${id}`,
+                                    latitude: center.lat,
+                                    longitude: center.lon,
+                                })
+                            },
                             popupclose: () => {
                                 if (useShelterStore.getState().selectedId === id) {
                                     clearSelection()
                                 }
+                                clearRouteTarget(`shelter:${id}`)
                             },
                         }}
                     >
                         <Popup>
-                            <strong>{center.name}</strong>
-                            <br />
-                            {center.type}
-                            {distanceKm !== null ? (
-                                <>
-                                    <br />
-                                    {formatDistanceKm(distanceKm)} away
-                                </>
-                            ) : null}
-                            {center.address ? (
-                                <>
-                                    <br />
-                                    {center.address}
-                                </>
-                            ) : null}
+                            <dl className="marker-detail-facts">
+                                <dt>Name</dt>
+                                <dd>{center.name}</dd>
+                                <dt>Type</dt>
+                                <dd>{center.type}</dd>
+                                <dt>Location</dt>
+                                <dd>
+                                    {center.address ??
+                                        `${center.lat.toFixed(5)}, ${center.lon.toFixed(5)}`}
+                                </dd>
+                                {distanceKm !== null ? (
+                                    <>
+                                        <dt>Distance</dt>
+                                        <dd className="marker-detail-distance">
+                                            {formatDistanceKm(distanceKm)} until destination
+                                        </dd>
+                                    </>
+                                ) : null}
+                            </dl>
                         </Popup>
                     </Marker>
                 )

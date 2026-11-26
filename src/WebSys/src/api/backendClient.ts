@@ -53,6 +53,19 @@ export type ApiCredentials = {
     key: string
 }
 
+/** [latitude, longitude] pairs ready for a Leaflet Polyline. */
+export type RouteResult = {
+    coordinates: [number, number][]
+    distanceM: number
+    durationS: number
+}
+
+type RawRoute = {
+    coordinates?: [number, number][]
+    distance_m?: number
+    duration_s?: number
+}
+
 export type ChatRequestInput = {
     api: string
     apiKey: string
@@ -212,6 +225,38 @@ export const backend = {
             )
         } catch {
             console.error('[backend] The shelters endpoint is unreachable.')
+            return null
+        }
+    },
+
+    /** Road path between two points, proxied by the backend. */
+    async getRoute(
+        fromLat: number,
+        fromLon: number,
+        toLat: number,
+        toLon: number,
+    ): Promise<RouteResult | null> {
+        const params = new URLSearchParams({
+            from_lat: String(fromLat),
+            from_lon: String(fromLon),
+            to_lat: String(toLat),
+            to_lon: String(toLon),
+        })
+        try {
+            const raw = await readJson<RawRoute>(
+                await fetch(`${BACKEND_URL}/route?${params.toString()}`),
+                'route',
+            )
+            if (!raw || !Array.isArray(raw.coordinates) || raw.coordinates.length === 0) {
+                return null
+            }
+            return {
+                coordinates: raw.coordinates,
+                distanceM: raw.distance_m ?? 0,
+                durationS: raw.duration_s ?? 0,
+            }
+        } catch {
+            console.error('[backend] The route endpoint is unreachable.')
             return null
         }
     },

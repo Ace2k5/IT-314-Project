@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
+import { maplibreGL } from '@maplibre/maplibre-gl-leaflet'
+import { setWorkerUrl } from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+import { useEffect, useRef } from 'react'
 import { Circle, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
-import { getEarthquakeEvents } from '../../cache/earthquakeCache'
-import { getEvacuationCenters } from '../../cache/evacCenterCache'
-import { getTyphoon } from '../../cache/typhoonCache'
+import { useShelterEntries } from '../../hooks/useShelterEntries'
+import { useAlertStore } from '../../stores/useAlertStore'
+import { useAppearanceStore } from '../../stores/useAppearanceStore'
+import type { BasemapKey } from '../../stores/useAppearanceStore'
+import { useHazardStore } from '../../stores/useHazardStore'
 import { useLocationStore } from '../../stores/useLocationStore'
 import { useMapDockStore } from '../../stores/useMapDockStore'
-import type { MapPanel } from '../../stores/useMapDockStore'
 import { useMapLayersStore } from '../../stores/useMapLayersStore'
+import { useShelterDataStore } from '../../stores/useShelterDataStore'
 import { useShelterStore } from '../../stores/useShelterStore'
-import type { EarthquakeEvent, EvacuationCenters, TyphoonEvent } from '../../types/api'
 import { DisasterNews } from '../news/DisasterNews'
 import { WEATHER_ICONS } from '../weather/weatherIcons'
 import { EarthquakeMarkers } from './Earthquake'
 import { MapDock } from './MapDock'
+import { RouteLayer } from './RouteLayer'
 import { ShelterMarkers } from './Shelter'
-import { filterByRadius, filterBySpacing, toShelterEntries } from './shelterUtils'
 import { TyphoonMarkers } from './Typhoon'
 import { UserLocationMarker } from './UserLocationMarker'
 import { WeatherLayer } from './WeatherLayer'
@@ -25,9 +30,27 @@ import './MapView.css'
 const MANILA_CENTER: [number, number] = [14.5995, 120.9842]
 const INITIAL_ZOOM = 6
 
-const TILE_URL =
-    import.meta.env.VITE_TILE_URL ??
-    'https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png?key=cb1_402u_1_2b0d51d8f3e9bea980b035cc'
+/** MapLibre parses vector tiles in a worker; Vite needs the bundled worker URL. */
+setWorkerUrl(workerUrl)
+
+const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+
+/** The basemaps Leaflet can draw as plain raster tiles. */
+const RASTER_BASEMAPS: Record<
+    Exclude<BasemapKey, 'openfreemap'>,
+    { url: string; attribution: string }
+> = {
+    openstreetmap: {
+        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+    voyager: {
+        url: 'https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png?key=cb1_402u_1_2b0d51d8f3e9bea980b035cc',
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; CARTO',
+    },
+}
 
 /**
  * When the radius appears, bring the map close enough to read it and place the
@@ -47,85 +70,101 @@ function RadiusFocus({ latitude, longitude }: { latitude: number; longitude: num
     return null
 }
 
-export function MapView() {
-    const [earthquakeEvents, setEarthquakeEvents] = useState<EarthquakeEvent[]>([])
-    const [typhoonEvents, setTyphoonEvents] = useState<TyphoonEvent[]>([])
-    const [earthquakeReady, setEarthquakeReady] = useState(false)
-    const [typhoonReady, setTyphoonReady] = useState(false)
-    const [shelters, setShelters] = useState<EvacuationCenters | null>(null)
-    const [sheltersReady, setSheltersReady] = useState(false)
+/** Zoom to the simulated hazard when high alert starts. */
+function AlertFocus() {
+    const map = useMap()
+    const alert = useAlertStore((state) => state.alert)
 
-    const [selectedEarthquake, setSelectedEarthquake] = useState<EarthquakeEvent | null>(null)
-    const [selectedTyphoon, setSelectedTyphoon] = useState<TyphoonEvent | null>(null)
+    useEffect(() => {
+        if (!alert) return
+        map.flyTo(
+            [alert.origin.latitude, alert.origin.longitude],
+            Math.max(map.getZoom(), 13),
+            { duration: 0.8 },
+        )
+    }, [alert, map])
+
+    return null
+}
+
+/** OpenFreeMap serves vector tiles, which Leaflet renders through MapLibre. */
+function OpenFreeMapLayer() {
+    const map = useMap()
+
+    useEffect(() => {
+        const layer = maplibreGL({ style: OPENFREEMAP_STYLE }).addTo(map)
+
+        return () => {
+            // The plugin adds the style's attribution to Leaflet but never removes it.
+            const attribution = layer.getAttribution?.()
+            if (attribution) map.attributionControl.removeAttribution(attribution)
+            layer.remove()
+        }
+    }, [map])
+
+    return null
+}
+
+export function MapView() {
+    const loadHazards = useHazardStore((state) => state.loadHazards)
+    const loadShelters = useShelterDataStore((state) => state.loadShelters)
+    const selectedEarthquake = useHazardStore((state) => state.selectedEarthquake)
+    const selectedTyphoon = useHazardStore((state) => state.selectedTyphoon)
 
     const openPanel = useMapDockStore((state) => state.openPanel)
-    const setMapPanel = useMapDockStore((state) => state.setPanel)
-    const closeMapPanel = useMapDockStore((state) => state.closePanel)
-
     const showWeather = useMapLayersStore((state) => state.showWeather)
-    const setShowWeather = useMapLayersStore((state) => state.setShowWeather)
     const toggleWeather = useMapLayersStore((state) => state.toggleWeather)
 
     const coords = useLocationStore((state) => state.coords)
-    const locationStatus = useLocationStore((state) => state.status)
-    const requestLocation = useLocationStore((state) => state.requestLocation)
+    const basemap = useAppearanceStore((state) => state.basemap)
 
+    const sheltersReady = useShelterDataStore((state) => state.ready)
+    const sheltersForDisplay = useShelterEntries()
     const selectedShelterId = useShelterStore((state) => state.selectedId)
     const selectShelter = useShelterStore((state) => state.selectShelter)
     const clearShelterSelection = useShelterStore((state) => state.clearSelection)
-    const minDistanceKm = useShelterStore((state) => state.minDistanceKm)
     const radiusMode = useShelterStore((state) => state.radiusMode)
     const radiusKm = useShelterStore((state) => state.radiusKm)
 
     useEffect(() => {
-        let cancelled = false
+        void loadHazards()
+        void loadShelters()
+    }, [loadHazards, loadShelters])
 
-        void getEarthquakeEvents().then((events) => {
-            if (cancelled) return
-            setEarthquakeEvents(events)
-            setEarthquakeReady(true)
-        })
-        void getTyphoon().then((events) => {
-            if (cancelled) return
-            setTyphoonEvents(events)
-            setTyphoonReady(true)
-        })
-        void getEvacuationCenters().then((centers) => {
-            if (cancelled) return
-            setShelters(centers ?? {})
-            setSheltersReady(true)
-        })
-
-        return () => {
-            cancelled = true
-        }
-    }, [])
-
-    const sheltersForDisplay = useMemo(() => {
-        const entries = toShelterEntries(shelters ?? {}, coords)
-        const radiusFiltered =
-            openPanel === 'shelter' && radiusMode
-                ? filterByRadius(entries, radiusKm)
-                : entries
-        return filterBySpacing(radiusFiltered, minDistanceKm)
-    }, [shelters, coords, openPanel, radiusMode, radiusKm, minDistanceKm])
+    /** True once the auto-select has run for the current Shelters session. */
+    const autoSelectedRef = useRef(false)
 
     /**
      * Opening the Shelters window (or changing its filters) keeps a valid
      * selection: the nearest shelter is selected when there is none, and a
      * shelter removed by the filters is replaced by the new nearest.
+     *
+     * A selection the user cleared by closing a popup stays cleared. Picking it
+     * back up would reopen the popup they just dismissed, which on a phone is
+     * the main way to read a shelter and then get it out of the way.
      */
     useEffect(() => {
-        if (openPanel !== 'shelter' || !sheltersReady || !coords) return
+        if (openPanel !== 'shelter') {
+            autoSelectedRef.current = false
+            return
+        }
+        if (!sheltersReady || !coords) return
 
         if (sheltersForDisplay.length === 0) {
+            autoSelectedRef.current = true
             if (selectedShelterId !== null) clearShelterSelection()
             return
         }
 
-        if (!sheltersForDisplay.some((shelter) => shelter.id === selectedShelterId)) {
-            selectShelter(sheltersForDisplay[0].id)
+        if (sheltersForDisplay.some((shelter) => shelter.id === selectedShelterId)) {
+            autoSelectedRef.current = true
+            return
         }
+
+        if (selectedShelterId === null && autoSelectedRef.current) return
+
+        autoSelectedRef.current = true
+        selectShelter(sheltersForDisplay[0].id)
     }, [
         openPanel,
         sheltersReady,
@@ -135,45 +174,6 @@ export function MapView() {
         selectShelter,
         clearShelterSelection,
     ])
-
-    const handleClosePanel = () => {
-        if (openPanel === 'shelter') setShowWeather(true)
-        closeMapPanel()
-    }
-
-    const handleTogglePanel = (panel: MapPanel) => {
-        // Clicking the active dock button closes the window.
-        if (openPanel === panel) {
-            handleClosePanel()
-            return
-        }
-
-        // Leaving Shelters restores city weather; entering it removes weather.
-        if (openPanel === 'shelter') setShowWeather(true)
-        setMapPanel(panel)
-
-        if (panel === 'shelter') {
-            setShowWeather(false)
-            // Each fresh open starts at the closest shelter; the selection
-            // effect picks the nearest once location and shelters are ready.
-            clearShelterSelection()
-
-            if (!coords && (locationStatus === 'idle' || locationStatus === 'error')) {
-                void requestLocation()
-            }
-        }
-    }
-
-    const selectEarthquake = (event: EarthquakeEvent) => setSelectedEarthquake(event)
-    const selectTyphoon = (event: TyphoonEvent) => setSelectedTyphoon(event)
-
-    const clearEarthquake = () => {
-        setSelectedEarthquake(null)
-    }
-
-    const clearTyphoon = () => {
-        setSelectedTyphoon(null)
-    }
 
     const shelterMarkersVisible = openPanel === 'shelter'
     const weatherVisible = showWeather && openPanel !== 'shelter'
@@ -188,11 +188,17 @@ export function MapView() {
                             zoom={INITIAL_ZOOM}
                             className="leaflet-map"
                         >
-                            <TileLayer
-                                url={TILE_URL}
-                                attribution="&copy; OpenStreetMap contributors"
-                            />
+                            {basemap === 'openfreemap' ? (
+                                <OpenFreeMapLayer />
+                            ) : (
+                                <TileLayer
+                                    url={RASTER_BASEMAPS[basemap].url}
+                                    attribution={RASTER_BASEMAPS[basemap].attribution}
+                                />
+                            )}
                             {weatherVisible ? <WeatherLayer /> : null}
+                            <RouteLayer />
+                            <AlertFocus />
                             <UserLocationMarker />
                             <ShelterMarkers
                                 shelters={sheltersForDisplay}
@@ -274,27 +280,7 @@ export function MapView() {
                         </ul>
                     </div>
 
-                    <MapDock
-                        earthquakeEvents={earthquakeEvents}
-                        typhoonEvents={typhoonEvents}
-                        earthquakeReady={earthquakeReady}
-                        typhoonReady={typhoonReady}
-                        selectedEarthquake={selectedEarthquake}
-                        selectedTyphoon={selectedTyphoon}
-                        selectedShelterId={selectedShelterId}
-                        shelters={sheltersForDisplay}
-                        sheltersReady={sheltersReady}
-                        openPanel={openPanel}
-                        onTogglePanel={handleTogglePanel}
-                        onClosePanel={handleClosePanel}
-                        onSelectEarthquake={selectEarthquake}
-                        onSelectTyphoon={selectTyphoon}
-                        onClearEarthquake={clearEarthquake}
-                        onClearTyphoon={clearTyphoon}
-                        onRequestLocation={() => {
-                            void requestLocation()
-                        }}
-                    />
+                    <MapDock />
                 </div>
             </div>
 

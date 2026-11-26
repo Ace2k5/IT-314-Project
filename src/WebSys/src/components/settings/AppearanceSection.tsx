@@ -1,4 +1,6 @@
 import {
+    BASEMAP_OPTIONS,
+    FONT_OPTIONS,
     MAX_ICON_POP_SPEED,
     MIN_ICON_POP_SPEED,
     useAppearanceStore,
@@ -39,42 +41,93 @@ export function AppearanceSectionButton({ activeSection, setActiveSection }: Sec
 export function AppearanceSection() {
     const iconPopupSpeed = useAppearanceStore((state) => state.iconPopupSpeed)
     const setIconPopupSpeed = useAppearanceStore((state) => state.setIconPopupSpeed)
+    const fontFamily = useAppearanceStore((state) => state.fontFamily)
+    const setFontFamily = useAppearanceStore((state) => state.setFontFamily)
+    const basemap = useAppearanceStore((state) => state.basemap)
+    const setBasemap = useAppearanceStore((state) => state.setBasemap)
 
     return (
         <div className="appearance-section">
             <h2>Appearance</h2>
             <p className="section-description">
-                Tune how map icons and hazard controls appear.
+                Choose the typeface and base map, and tune how hazard icons appear.
             </p>
 
-            <div className="appearance-preview">
-                <img
-                    key={iconPopupSpeed}
-                    className="appearance-preview-icon"
-                    src={WEATHER_ICONS.sunny}
-                    alt=""
-                />
-                <span>Preview · {iconPopupSpeed.toFixed(2)} s</span>
+            <div className="appearance-group">
+                <h3 className="appearance-group-title">Font</h3>
+                <div className="appearance-options" role="radiogroup" aria-label="Font">
+                    {FONT_OPTIONS.map((font) => (
+                        <button
+                            key={font.key}
+                            type="button"
+                            role="radio"
+                            aria-checked={fontFamily === font.key}
+                            className={`appearance-option${fontFamily === font.key ? ' active' : ''}`}
+                            style={{ fontFamily: font.stack }}
+                            onClick={() => setFontFamily(font.key)}
+                        >
+                            <span>{font.label}</span>
+                            {font.key === 'inter' ? (
+                                <span className="appearance-badge">Recommended</span>
+                            ) : null}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <label className="appearance-control">
-                <span>
-                    Icon Popup Speed <strong>{iconPopupSpeed.toFixed(2)} s</strong>
-                </span>
-                <input
-                    className="appearance-range"
-                    type="range"
-                    min={MIN_ICON_POP_SPEED}
-                    max={MAX_ICON_POP_SPEED}
-                    step={0.05}
-                    value={iconPopupSpeed}
-                    onChange={(event) => setIconPopupSpeed(Number(event.target.value))}
-                />
-            </label>
+            <div className="appearance-group">
+                <h3 className="appearance-group-title">Map</h3>
+                <div className="appearance-options" role="radiogroup" aria-label="Map">
+                    {BASEMAP_OPTIONS.map((option) => (
+                        <button
+                            key={option.key}
+                            type="button"
+                            role="radio"
+                            aria-checked={basemap === option.key}
+                            className={`appearance-option${basemap === option.key ? ' active' : ''}`}
+                            onClick={() => setBasemap(option.key)}
+                        >
+                            <span>{option.label}</span>
+                        </button>
+                    ))}
+                </div>
+                <p className="appearance-note">
+                    Base map drawn beneath the hazards, shelters, and weather.
+                </p>
+            </div>
 
-            <p className="appearance-note">
-                Applies to the weather, shelter, and location markers, plus the map dock icons.
-            </p>
+            <div className="appearance-group">
+                <h3 className="appearance-group-title">Motion</h3>
+                <div className="appearance-preview">
+                    <img
+                        key={iconPopupSpeed}
+                        className="appearance-preview-icon"
+                        src={WEATHER_ICONS.sunny}
+                        alt=""
+                    />
+                    <span>Preview · {iconPopupSpeed.toFixed(2)} s</span>
+                </div>
+
+                <label className="appearance-control">
+                    <span>
+                        Icon Popup Speed <strong>{iconPopupSpeed.toFixed(2)} s</strong>
+                    </span>
+                    <input
+                        className="appearance-range"
+                        type="range"
+                        min={MIN_ICON_POP_SPEED}
+                        max={MAX_ICON_POP_SPEED}
+                        step={0.05}
+                        value={iconPopupSpeed}
+                        onChange={(event) => setIconPopupSpeed(Number(event.target.value))}
+                    />
+                </label>
+
+                <p className="appearance-note">
+                    Applies to the weather, shelter, and location markers, plus the map dock
+                    icons.
+                </p>
+            </div>
         </div>
     )
 }

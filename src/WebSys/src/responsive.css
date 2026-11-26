@@ -1,0 +1,72 @@
+/* ------------------------------------------------------------------ */
+/* Responsive foundation                                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The app collapses to a single column on phones. Two cut-offs cover every
+ * page, so component files only add layout inside these two queries:
+ *
+ *   720px   phones and small tablets in portrait (the main breakpoint)
+ *   480px   small phones, iPhone SE and narrower
+ *
+ * Above 720px nothing changes: the desktop layout is untouched.
+ */
+
+:root {
+    /* One gutter for every page, so the single column lines up with itself. */
+    --layout-gutter: 16px;
+
+    /* Smallest comfortable touch target (Apple and Android both suggest 44). */
+    --touch-target: 44px;
+
+    /* Notched phones: fixed bars and sheets must clear the inset. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* dvh follows the mobile URL bar; 100vh would sit underneath it. */
+body {
+    min-height: 100dvh;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+@media (max-width: 720px) {
+    :root {
+        /* A shorter bar leaves more of the phone for content. Pages read this
+           variable, so overriding it here moves all of them at once. */
+        --navbar-height: 56px;
+    }
+
+    /* A phone never scrolls sideways. */
+    body {
+        overflow-x: hidden;
+    }
+
+    /* iOS zooms the page when a focused field's text is under 16px. */
+    .input-field input,
+    .input-group input {
+        font-size: 16px;
+    }
+
+    /* Every control a thumb has to hit, in one place. Square icon buttons keep
+       their shape in their own component files. */
+    .nav-button,
+    .btn-sidebar,
+    .hazard-button,
+    .model-item,
+    .location-choice,
+    .overview-action,
+    .overview-shelter-action,
+    .location-primary,
+    .location-secondary,
+    .alert-primary,
+    .alert-secondary,
+    .input-field button,
+    .chat-suggestions button,
+    .news-empty-btn {
+        min-height: var(--touch-target);
+    }
+}

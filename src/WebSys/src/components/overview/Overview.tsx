@@ -9,6 +9,7 @@ import { useShelterStore } from '../../stores/useShelterStore'
 import { useUiStore } from '../../stores/useUiStore'
 import type { EvacuationCenters, ForecastDay } from '../../types/api'
 import { formatDistanceKm, toShelterEntries } from '../leaflet/shelterUtils'
+import { formatAccuracy } from '../../utils/locationFormat'
 import shelterIcon from '../leaflet/map_assets/shelter.png'
 import { DisasterNews } from '../news/DisasterNews'
 import { WEATHER_ICONS, WEATHER_LABELS } from '../weather/weatherIcons'
@@ -50,7 +51,7 @@ export function Overview() {
     const coords = useLocationStore((state) => state.coords)
     const locationStatus = useLocationStore((state) => state.status)
     const locationError = useLocationStore((state) => state.error)
-    const requestLocation = useLocationStore((state) => state.requestLocation)
+    const openLocationPicker = useUiStore((state) => state.openLocationPicker)
 
     const [shelters, setShelters] = useState<EvacuationCenters | null>(null)
     const [sheltersReady, setSheltersReady] = useState(false)
@@ -77,12 +78,6 @@ export function Overview() {
             cancelled = true
         }
     }, [coords, reloadToken])
-
-    useEffect(() => {
-        if (locationStatus === 'idle') {
-            void requestLocation()
-        }
-    }, [locationStatus, requestLocation])
 
     // The weather session TTL is three minutes; checking every minute lets the
     // observed min/max update while Overview stays open.
@@ -123,7 +118,11 @@ export function Overview() {
     }
 
     const locationLine = coords
-        ? `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)} · ±${Math.round(coords.accuracy)} m`
+        ? `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)} · ${
+              coords.source === 'manual'
+                  ? 'Pinned manually'
+                  : `±${formatAccuracy(coords.accuracy)}`
+          }`
         : locationStatus === 'locating'
           ? 'Finding your location…'
           : (locationError ?? 'Location access has not been granted yet.')
@@ -134,6 +133,15 @@ export function Overview() {
                 <p className="overview-eyebrow">Your local forecast</p>
                 <h1>{weather?.place ? `Near ${weather.place}` : 'Your location'}</h1>
                 <p className="overview-coords">{locationLine}</p>
+                {coords ? (
+                    <button
+                        type="button"
+                        className="overview-location-change"
+                        onClick={openLocationPicker}
+                    >
+                        Change location
+                    </button>
+                ) : null}
 
                 {!coords ? (
                     <div className="overview-status">
@@ -145,12 +153,10 @@ export function Overview() {
                         <button
                             type="button"
                             className="overview-action"
-                            onClick={() => {
-                                void requestLocation()
-                            }}
+                            onClick={openLocationPicker}
                             disabled={locationStatus === 'locating'}
                         >
-                            {locationStatus === 'locating' ? 'Locating…' : 'Use my location'}
+                            {locationStatus === 'locating' ? 'Locating…' : 'Find location'}
                         </button>
                     </div>
                 ) : weatherError && !weather ? (

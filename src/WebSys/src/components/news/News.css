@@ -232,3 +232,28 @@
         animation: none;
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* News on a phone: one column                                         */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .news-list {
+        gap: 10px;
+    }
+
+    .news-item {
+        padding: 14px;
+    }
+
+    /* The domain chip can breathe now that the meta row owns the width. */
+    .news-domain {
+        max-width: 55%;
+    }
+
+    /* The placeholder cards follow the real list down to a single column. */
+    .news-skeleton-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+}

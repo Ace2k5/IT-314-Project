@@ -1,0 +1,231 @@
+.location-picker-background {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3px);
+}
+
+.location-picker {
+    display: flex;
+    flex-direction: column;
+    width: min(460px, 92vw);
+    max-height: min(700px, 90vh);
+    overflow-y: auto;
+    padding: 18px 20px 20px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3);
+    animation: location-picker-in 180ms var(--ease);
+}
+
+@keyframes location-picker-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.995);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.location-picker-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.location-picker-topbar h2 {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+}
+
+.location-close {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease),
+        color var(--speed) var(--ease);
+}
+
+.location-close:hover {
+    background-color: var(--surface-tint);
+    border-color: var(--calm-blue);
+    color: var(--calm-blue);
+}
+
+.location-picker-summary {
+    margin: 2px 0 14px;
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.location-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.location-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    padding: 12px 14px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    text-align: left;
+    transition:
+        background-color var(--speed) var(--ease),
+        border-color var(--speed) var(--ease);
+}
+
+.location-choice:hover {
+    background-color: var(--surface-muted);
+    border-color: var(--line-strong);
+}
+
+.location-choice:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.location-choice-title {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.location-choice-note {
+    color: var(--ink-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.location-picker-note {
+    margin: 0 0 10px;
+    color: var(--ink-muted);
+    font-size: 12px;
+}
+
+.location-picker-error {
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    background-color: var(--surface-tint);
+    border: 1px solid color-mix(in srgb, var(--calm-blue) 22%, white);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.location-picker-map {
+    height: 240px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.location-picker-map-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.location-picker-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.location-primary {
+    padding: 9px 16px;
+    background-color: var(--calm-blue);
+    color: var(--ink-on-blue);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.location-primary:hover {
+    background-color: color-mix(in srgb, var(--calm-blue) 86%, var(--calm-black));
+}
+
+.location-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.location-secondary {
+    padding: 9px 16px;
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.location-secondary:hover {
+    background-color: var(--surface-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .location-picker {
+        animation: none;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Location picker on a phone: a sheet from the bottom                 */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .location-picker-background {
+        align-items: flex-end;
+    }
+
+    .location-picker {
+        width: 100%;
+        max-height: 92dvh;
+        padding: 16px var(--layout-gutter) calc(16px + var(--safe-bottom));
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .location-picker-map {
+        height: 200px;
+    }
+
+    /* One action under the other, wider than a thumb, instead of a tight row. */
+    .location-picker-actions {
+        flex-direction: column-reverse;
+    }
+
+    .location-picker-actions > * {
+        width: 100%;
+    }
+}

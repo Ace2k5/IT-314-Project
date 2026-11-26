@@ -295,3 +295,52 @@
         transition: none;
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* Chat on a phone                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .chat-page {
+        width: 100%;
+        gap: 16px;
+        padding: calc(var(--navbar-height) + 12px) var(--layout-gutter) 32px;
+    }
+
+    /* Fill the space between the nav bar and the bottom of the screen. */
+    .chat-box {
+        height: calc(100dvh - var(--navbar-height) - 100px);
+        min-height: 340px;
+    }
+
+    .chat-header {
+        padding: 12px 16px;
+    }
+
+    .display-messages {
+        gap: 10px;
+        padding: 14px 16px;
+    }
+
+    .chat-message {
+        max-width: 88%;
+    }
+
+    .chat-empty {
+        padding: 12px;
+    }
+
+    .input-field {
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .input-field input {
+        height: 44px;
+    }
+
+    .input-field button {
+        height: 44px;
+        padding: 0 14px;
+    }
+}
