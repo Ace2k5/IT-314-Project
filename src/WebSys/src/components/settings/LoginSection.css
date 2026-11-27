@@ -93,3 +93,10 @@
     border-color: var(--calm-blue);
     color: var(--calm-blue);
 }
+
+:root.dark-mode .btn-avatar,
+:root.dark-mode .account-avatar {
+    background-color: #f8fafc;
+    border-color: #dbeafe;
+    box-shadow: 0 0 0 3px rgba(219, 234, 254, 0.28);
+}

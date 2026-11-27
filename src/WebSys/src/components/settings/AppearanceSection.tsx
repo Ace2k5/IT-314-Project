@@ -6,6 +6,7 @@ import {
     useAppearanceStore,
 } from '../../stores/useAppearanceStore'
 import { WEATHER_ICONS } from '../weather/weatherIcons'
+import darkModeIcon from './settings_assets/dark_mode_icon.png'
 import type { SettingsSection } from './sections'
 import './AppearanceSection.css'
 
@@ -45,13 +46,36 @@ export function AppearanceSection() {
     const setFontFamily = useAppearanceStore((state) => state.setFontFamily)
     const basemap = useAppearanceStore((state) => state.basemap)
     const setBasemap = useAppearanceStore((state) => state.setBasemap)
+    const darkMode = useAppearanceStore((state) => state.darkMode)
+    const setDarkMode = useAppearanceStore((state) => state.setDarkMode)
 
     return (
         <div className="appearance-section">
             <h2>Appearance</h2>
             <p className="section-description">
-                Choose the typeface and base map, and tune how hazard icons appear.
+                Choose your theme, typeface, and base map, and tune how hazard icons appear.
             </p>
+
+            <div className="appearance-group">
+                <h3 className="appearance-group-title">Theme</h3>
+                <div className="appearance-theme-toggle">
+                    <img className="appearance-theme-icon" src={darkModeIcon} alt="" />
+                    <span className="appearance-theme-label">
+                        <strong>Dark mode</strong>
+                        <small>{darkMode ? 'On' : 'Off'}</small>
+                    </span>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-label="Dark mode"
+                        aria-checked={darkMode}
+                        className={`appearance-switch${darkMode ? ' active' : ''}`}
+                        onClick={() => setDarkMode(!darkMode)}
+                    >
+                        <span />
+                    </button>
+                </div>
+            </div>
 
             <div className="appearance-group">
                 <h3 className="appearance-group-title">Font</h3>

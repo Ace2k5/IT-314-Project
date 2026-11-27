@@ -49,6 +49,10 @@
     background-color: color-mix(in srgb, var(--calm-white) 55%, white);
 }
 
+:root.dark-mode .display-messages {
+    background-color: var(--surface-muted);
+}
+
 /* Empty state */
 
 .chat-empty {
@@ -75,6 +79,10 @@
     width: 34px;
     height: 34px;
     object-fit: contain;
+}
+
+:root.dark-mode .chat-empty-icon img {
+    filter: invert(1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
 }
 
 .chat-empty h2 {

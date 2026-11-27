@@ -24,7 +24,13 @@ function App() {
     const isLocationPickerOpen = useUiStore((state) => state.isLocationPickerOpen)
     const iconPopupSpeed = useAppearanceStore((state) => state.iconPopupSpeed)
     const fontFamily = useAppearanceStore((state) => state.fontFamily)
+    const darkMode = useAppearanceStore((state) => state.darkMode)
     const [isNavbarVisible, setIsNavbarVisible] = useState(false)
+
+    useEffect(() => {
+        document.documentElement.classList.toggle('dark-mode', darkMode)
+        document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light'
+    }, [darkMode])
 
     useEffect(() => {
         const handlePointerMove = (event: PointerEvent) => {

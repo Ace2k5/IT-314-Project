@@ -38,9 +38,12 @@ type AppearanceState = {
     fontFamily: FontKey
     /** Base map tiles drawn under the hazard layers. */
     basemap: BasemapKey
+    /** Whether the interface uses the dark color palette. */
+    darkMode: boolean
     setIconPopupSpeed: (speed: number) => void
     setFontFamily: (fontFamily: FontKey) => void
     setBasemap: (basemap: BasemapKey) => void
+    setDarkMode: (darkMode: boolean) => void
 }
 
 /** Appearance choices are not secret, so they survive a reload in localStorage. */
@@ -50,6 +53,7 @@ export const useAppearanceStore = create<AppearanceState>()(
             iconPopupSpeed: DEFAULT_ICON_POP_SPEED,
             fontFamily: 'inter',
             basemap: 'openfreemap',
+            darkMode: false,
             setIconPopupSpeed: (speed) =>
                 set({
                     iconPopupSpeed: Math.min(
@@ -59,6 +63,7 @@ export const useAppearanceStore = create<AppearanceState>()(
                 }),
             setFontFamily: (fontFamily) => set({ fontFamily }),
             setBasemap: (basemap) => set({ basemap }),
+            setDarkMode: (darkMode) => set({ darkMode }),
         }),
         { name: 'disaster-watch-appearance' },
     ),
